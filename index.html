@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0C2257">
+<title>PECUT SOLO — Pemasa pecut satu telefon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,700;1,800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#0C2257; --trek:#163A8C; --trek2:#1E4AA8; --kapur:#EEF2F8; --kabur:#9FB3DE;
+  --kuning:#FFD23F; --merah:#FF4B3E; --hijau:#3DDC97; --garis:rgba(255,255,255,.82); --garis-halus:rgba(255,255,255,.16);
+  --cond:"Barlow Condensed","Arial Narrow","Roboto Condensed",sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{margin:0;background:var(--night);color:var(--kapur);font-family:var(--body);font-size:16px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--kuning);outline-offset:2px}
+.bar{display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:2px solid var(--garis)}
+.brand{font-family:var(--cond);font-style:italic;font-weight:800;font-size:28px;letter-spacing:.01em;line-height:1}
+.brand span{color:var(--kuning)}
+.tag{color:var(--kabur);font-size:14px;flex:1}
+.iconbtn{background:none;border:1.5px solid var(--garis-halus);border-radius:8px;padding:7px 12px;font-size:14px}
+.iconbtn:hover{border-color:var(--kabur)}
+main{display:grid;grid-template-columns:1fr;gap:0}
+@media (min-width:880px){main{grid-template-columns:minmax(0,1.45fr) minmax(340px,1fr)}.cam{border-right:2px solid var(--garis)}}
+.cam{padding:14px 16px;min-width:0}
+.stagewrap{display:flex;justify-content:center}
+.stage{position:relative;background:#081a45;border-radius:6px;overflow:hidden;width:100%;aspect-ratio:16/9;touch-action:none}
+.stage video,.stage canvas{position:absolute;inset:0;width:100%;height:100%}
+.stage video{object-fit:fill;background:#081a45}
+.stage canvas{cursor:ew-resize}
+.empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:20px}
+.empty p{margin:0;color:var(--kabur);max-width:36ch}
+.flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:var(--kuning);mix-blend-mode:screen;transition:opacity .5s}
+.flash.on{opacity:.55;transition:none}
+.flash.red{background:var(--merah)}
+.meta{display:flex;gap:14px;align-items:center;margin-top:8px;font-size:13px;color:var(--kabur);flex-wrap:wrap}
+.meta b{color:var(--kapur);font-weight:600}
+.meta .grow{flex:1;min-width:180px}
+.meta button{font-size:13px;padding:5px 10px}
+.panel{padding:14px 16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);border:2px solid var(--garis);border-radius:8px;overflow:hidden}
+.modes button{background:none;border:0;padding:10px 8px;text-align:left;border-left:2px solid var(--garis);display:flex;flex-direction:column;gap:2px;min-height:64px}
+.modes button:first-child{border-left:0}
+.modes b{font-family:var(--cond);font-weight:700;font-size:20px;line-height:1.05}
+.modes small{font-size:12px;color:var(--kabur);line-height:1.25}
+.modes button[aria-selected="true"]{background:var(--kuning);color:var(--night)}
+.modes button[aria-selected="true"] small{color:#2b3a66}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1.5px solid var(--garis-halus);border-radius:8px;overflow:hidden}
+.seg button{background:none;border:0;padding:8px 10px;text-align:left;font-size:14px;border-left:1.5px solid var(--garis-halus)}
+.seg button:first-child{border-left:0}
+.seg button b{display:block;font-weight:600}
+.seg button small{color:var(--kabur);font-size:12px}
+.seg button[aria-selected="true"]{background:var(--trek2)}
+.seg button[aria-selected="true"] b{color:var(--kuning)}
+.plan{margin:0;font-size:13.5px;background:var(--trek);border-left:4px solid var(--kuning);padding:9px 12px;border-radius:0 6px 6px 0}
+.plan b{color:var(--kuning)}
+.meta select{background:var(--trek);border:0;border-radius:6px;padding:5px 8px;font-size:13px;max-width:190px}
+.meta input[type=range]{width:110px;accent-color:var(--kuning)}
+.desc{margin:0;font-size:14px;color:var(--kabur);max-width:62ch}
+.fields{display:grid;grid-template-columns:1.6fr 1fr;gap:10px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--kabur)}
+label.f input{background:var(--trek);border:1.5px solid transparent;border-radius:6px;padding:10px 12px;font-size:17px;color:var(--kapur);width:100%}
+label.f input:focus{border-color:var(--kuning);outline:none}
+.clock{border-top:2px solid var(--garis);border-bottom:2px solid var(--garis);padding:6px 0 10px}
+.timer{font-family:var(--cond);font-weight:700;font-size:clamp(72px,17vw,148px);line-height:.95;color:var(--kuning);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.timer small{font-size:.32em;color:var(--kabur);margin-left:4px;font-weight:500}
+.clock.run .timer{color:var(--kapur)}
+.status{font-size:15px;font-weight:600;min-height:1.45em}
+.status.warn{color:var(--merah)}
+.speed{font-size:14px;color:var(--kabur);min-height:1.45em;font-variant-numeric:tabular-nums}
+.level{height:8px;background:var(--trek);border-radius:4px;position:relative;overflow:hidden}
+.level i{position:absolute;left:0;top:0;bottom:0;background:var(--hijau);width:0}
+.level u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--kuning)}
+.levelrow{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--kabur)}
+.actions{display:flex;gap:10px}
+.go{flex:1;background:var(--kuning);color:var(--night);border:0;border-radius:8px;padding:16px;font-family:var(--cond);font-weight:700;font-size:26px}
+.go:disabled{opacity:.4;cursor:not-allowed}
+.stop{background:none;border:2px solid var(--merah);color:var(--merah);border-radius:8px;padding:14px 18px;font-family:var(--cond);font-weight:700;font-size:22px}
+.rec{border-top:2px solid var(--garis);padding-top:10px}
+.rechead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tabs{display:flex;gap:4px;flex:1}
+.tabs button{background:none;border:0;padding:6px 10px;border-radius:6px;font-family:var(--cond);font-size:19px;font-weight:700;color:var(--kabur)}
+.tabs button[aria-selected="true"]{color:var(--kapur);background:var(--trek)}
+.small{background:none;border:1.5px solid var(--garis-halus);border-radius:6px;padding:5px 10px;font-size:13px}
+.list{list-style:none;margin:8px 0 0;padding:0}
+.list li{display:grid;grid-template-columns:72px 1fr auto;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--garis-halus)}
+.list img{width:72px;height:44px;object-fit:cover;border-radius:4px;background:var(--trek);cursor:zoom-in;display:block}
+.list .who{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list .sub{font-size:12px;color:var(--kabur)}
+.list .t{font-family:var(--cond);font-weight:700;font-size:28px;font-variant-numeric:tabular-nums;text-align:right;line-height:1}
+.list .t small{display:block;font-family:var(--body);font-size:11px;font-weight:500;color:var(--kabur)}
+.list .del{background:none;border:0;color:var(--kabur);font-size:12px;padding:2px 0;text-decoration:underline}
+.none{color:var(--kabur);font-size:14px;padding:14px 0}
+table.best{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}
+table.best th{text-align:left;font-weight:500;color:var(--kabur);font-size:12px;padding:6px 4px;border-bottom:1px solid var(--garis-halus)}
+table.best td{padding:8px 4px;border-bottom:1px solid var(--garis-halus)}
+table.best td.num{font-family:var(--cond);font-weight:700;font-size:22px;font-variant-numeric:tabular-nums}
+.bestwrap{overflow-x:auto}
+dialog{background:var(--night);color:var(--kapur);border:2px solid var(--garis);border-radius:10px;padding:0;max-width:min(560px,94vw);width:100%}
+dialog::backdrop{background:rgba(4,12,34,.72)}
+.dh{display:flex;align-items:center;padding:12px 16px;border-bottom:2px solid var(--garis)}
+.dh h2{margin:0;font-family:var(--cond);font-size:26px;flex:1}
+.db{padding:14px 16px;max-height:70vh;overflow:auto}
+.db ol{padding-left:22px;margin:0}
+.db li{margin-bottom:10px}
+.db p{margin:0 0 10px}
+.set{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--garis-halus)}
+.set label{font-weight:600}
+.set small{grid-column:1/-1;color:var(--kabur);font-size:12.5px}
+.set input[type=range]{width:150px;accent-color:var(--kuning)}
+.set input[type=number]{width:80px;background:var(--trek);border:0;border-radius:6px;padding:6px 8px}
+.set input[type=checkbox]{width:22px;height:22px;accent-color:var(--kuning)}
+.set output{font-variant-numeric:tabular-nums;color:var(--kuning);font-weight:600;margin-left:6px}
+.df{padding:12px 16px;border-top:1px solid var(--garis-halus);display:flex;justify-content:flex-end;gap:8px}
+.df button{background:var(--kuning);color:var(--night);border:0;border-radius:6px;padding:9px 18px;font-weight:600}
+#photoImg{width:100%;display:block;border-radius:4px}
+@media (prefers-reduced-motion:reduce){.flash{transition:none}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand">PECUT <span>SOLO</span></div>
+  <div class="tag">Pemasa pecut dengan satu telefon</div>
+  <button class="iconbtn" id="btnGuide">Panduan</button>
+  <button class="iconbtn" id="btnSettings">Tetapan</button>
+</header>
+
+<main>
+  <section class="cam">
+    <div class="stagewrap">
+      <div class="stage" id="stage">
+        <video id="video" playsinline muted autoplay></video>
+        <canvas id="overlay"></canvas>
+        <div class="flash" id="flash"></div>
+        <div class="empty" id="empty">
+          <p>Letak telefon di tepi garisan penamat, kamera menghala melintang ke lorong larian.</p>
+          <button class="go" id="btnCam" style="flex:none;padding:12px 26px;font-size:22px">Hidupkan kamera</button>
+        </div>
+      </div>
+    </div>
+    <div class="meta">
+      <span><b id="fps">—</b> fps</span>
+      <span class="grow" id="hint">Seret garisan kuning supaya selari dengan garisan penamat sebenar.</span>
+      <select id="camSel" hidden aria-label="Pilih kamera"></select>
+      <label id="zoomWrap" hidden style="display:flex;align-items:center;gap:6px">Zum <input type="range" id="zoom"></label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="modes" role="tablist" aria-label="Cara mula">
+      <button role="tab" data-mode="pistol" aria-selected="true"><b>Pistol</b><small>Telefon bunyikan tembakan</small></button>
+      <button role="tab" data-mode="clap" aria-selected="false"><b>Tepukan</b><small>Mula dengan tepukan atau wisel</small></button>
+      <button role="tab" data-mode="zone" aria-selected="false"><b>Dua garisan</b><small>Mula dan tamat dalam kamera</small></button>
+    </div>
+    <p class="desc" id="modeDesc"></p>
+    <div class="seg" id="startOpt" role="tablist" aria-label="Cara masa bermula" hidden>
+      <button role="tab" data-start="cross"><b>Lintas garisan A</b><small>Mula berdiri di belakang garisan, atau mula terbang</small></button>
+      <button role="tab" data-start="motion"><b>Gerakan pertama</b><small>Mula blok atau crouch — atlet diam dahulu</small></button>
+    </div>
+    <p class="plan" id="plan" hidden></p>
+
+    <div class="fields">
+      <label class="f">Nama atlet<input id="athlete" list="names" autocomplete="off" placeholder="cth. Aiman"></label>
+      <label class="f"><span id="distLabel">Jarak (m)</span><input id="dist" type="number" inputmode="decimal" min="1" max="400" step="0.5" value="60"></label>
+      <datalist id="names"></datalist>
+    </div>
+
+    <div class="clock" id="clock">
+      <div class="timer" id="timer">0.00<small>s</small></div>
+      <div class="status" id="status">Hidupkan kamera untuk bermula.</div>
+      <div class="speed" id="speed"></div>
+    </div>
+
+    <div class="levelrow" id="levelRow" hidden>
+      <span>Bunyi di mikrofon — garisan kuning ialah paras pencetus</span>
+      <div class="level"><i id="levelBar"></i><u id="levelMark"></u></div>
+    </div>
+
+    <div class="actions">
+      <button class="go" id="btnGo" disabled>Mula</button>
+      <button class="stop" id="btnCancel" hidden>Batal</button>
+    </div>
+
+    <div class="rec">
+      <div class="rechead">
+        <div class="tabs" role="tablist">
+          <button role="tab" data-tab="sesi" aria-selected="true">Larian</button>
+          <button role="tab" data-tab="best" aria-selected="false">Terbaik</button>
+        </div>
+        <button class="small" id="btnCsv">Muat turun CSV</button>
+        <button class="small" id="btnClear">Padam semua</button>
+      </div>
+      <div id="recBody"></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlgGuide">
+  <div class="dh"><h2>Cara pasang</h2></div>
+  <div class="db">
+    <ol>
+      <li><b>Letak telefon di garisan penamat</b>, 3–5 m dari tepi lorong, atas tripod atau bersandar pada sesuatu yang stabil. Mod landskap paling baik.</li>
+      <li><b>Halakan kamera melintang</b> supaya pelari lalu dari kiri ke kanan (atau sebaliknya) dalam skrin.</li>
+      <li><b>Seret garisan kuning</b> tepat ke garisan penamat sebenar. Uji dengan berjalan melintasinya: jalur merah pada garisan menunjukkan badan dikesan.</li>
+      <li><b>Pilih cara mula.</b> Pistol sesuai hingga ~40 m (pelari mesti dengar bunyi telefon). Tepukan: rakan tepuk papan atau tiup wisel di garisan mula, sesuai hingga 100 m. Dua garisan: telefon diletak jauh di tepi padang supaya garisan mula dan tamat kelihatan sekali gus — boleh hingga 100 m dengan kanta ultra-lebar.</li>
+      <li><b>Untuk Dua garisan jarak jauh</b>, seret tanda kecil di atas dan bawah setiap garisan supaya kotak hanya meliputi lorong pelari. Kanta pembesar muncul semasa menyeret supaya garisan boleh diletak tepat pada kon.</li>
+    </ol>
+    <p style="margin-top:12px;color:var(--kabur);font-size:14px">Masa dikira apabila <b>badan</b> (bukan tangan atau kaki) melintasi garisan, seperti peraturan olahraga. Semua data disimpan dalam telefon ini sahaja.</p>
+  </div>
+  <div class="df"><button id="guideOk">Faham</button></div>
+</dialog>
+
+<dialog id="dlgSettings">
+  <div class="dh"><h2>Tetapan</h2></div>
+  <div class="db">
+    <div class="set"><label for="sPix">Kepekaan pergerakan</label><span><input type="range" id="sPix" min="8" max="50" step="1"><output id="oPix"></output></span>
+      <small>Nombor kecil = lebih peka. Naikkan jika bayang atau daun bergerak menyebabkan pencetus palsu.</small></div>
+    <div class="set"><label for="sTorso">Saiz badan minimum</label><span><input type="range" id="sTorso" min="6" max="45" step="1"><output id="oTorso"></output></span>
+      <small>Peratus tinggi skrin yang mesti dilitupi badan sebelum dikira melintas. Ini mengabaikan hayunan tangan. Kurangkan jika pelari kelihatan kecil dalam kamera.</small></div>
+    <div class="set"><label for="sMot">Kepekaan gerakan pertama</label><span><input type="range" id="sMot" min="1" max="15" step="0.5"><output id="oMot"></output></span>
+      <small>Peratus kotak mula yang mesti berubah untuk dikira sebagai mula (mod Gerakan pertama). Naikkan jika angin atau bayang mencetuskan mula palsu.</small></div>
+    <div class="set"><label for="sComp">Pampasan jarak bunyi</label><input type="checkbox" id="sComp">
+      <small>Bunyi mengambil masa ~0.29 s untuk bergerak 100 m. Hidupkan supaya masa pelari tidak dirugikan oleh jarak dari telefon.</small></div>
+    <div class="set"><label for="sTemp">Suhu udara (°C)</label><input type="number" id="sTemp" min="0" max="45">
+      <small>Untuk kiraan kelajuan bunyi. 30 °C = 349 m/s.</small></div>
+    <div class="set"><label for="sClap">Kekuatan tepukan minimum</label><span><input type="range" id="sClap" min="0.04" max="0.7" step="0.01"><output id="oClap"></output></span>
+      <small>Naikkan jika bunyi sekeliling tercetus sebagai mula.</small></div>
+    <div class="set"><label for="sLat">Pembetulan latensi kamera (ms)</label><input type="number" id="sLat" min="-200" max="300" step="5">
+      <small>Tolak masa ini daripada setiap bingkai. Biarkan 0 melainkan anda telah bandingkan dengan sistem elektronik rasmi.</small></div>
+    <div class="set"><label for="sVoice">Arahan suara "Ke garisan… Sedia…"</label><input type="checkbox" id="sVoice">
+      <small>Jika dimatikan, telefon guna bunyi bip.</small></div>
+    <div class="set"><label for="sSay">Umumkan masa selepas tamat</label><input type="checkbox" id="sSay"></div>
+  </div>
+  <div class="df"><button id="setOk">Simpan</button></div>
+</dialog>
+
+<dialog id="dlgPhoto">
+  <div class="dh"><h2 id="photoTitle">Gambar penamat</h2></div>
+  <div class="db"><img id="photoImg" alt="Bingkai ketika pelari melintasi garisan"><p id="photoMeta" style="margin-top:10px;color:var(--kabur);font-size:14px"></p></div>
+  <div class="df"><button id="photoOk">Tutup</button></div>
+</dialog>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const KEY = 'pecutsolo.v1';
+
+/* ---------- storage ---------- */
+const DEF = {pix:24, torso:18, comp:true, temp:30, clap:0.2, lat:0, voice:true, say:true,
+  mode:'pistol', dist:{pistol:30, clap:60, zone:10}, lines:{finish:.5, a:.3, b:.7}, guided:false,
+  boxes:{finish:[0,1], a:[.2,.8], b:[.2,.8]}, startType:'cross', startW:.06, motion:3, camId:null, zoom:null};
+let store;
+try { store = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ store = {}; }
+const S = Object.assign({}, DEF, store.settings || {});
+S.dist = Object.assign({}, DEF.dist, S.dist); S.lines = Object.assign({}, DEF.lines, S.lines);
+S.boxes = Object.assign({}, DEF.boxes, S.boxes);
+let runs = Array.isArray(store.runs) ? store.runs : [];
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify({settings:S, runs})); }
+  catch(e){ // storage full: drop oldest photos
+    runs.slice(30).forEach(r => r.thumb = null);
+    try { localStorage.setItem(KEY, JSON.stringify({settings:S, runs})); } catch(_){}
+  }
+}
+
+/* ---------- elements & state ---------- */
+const video = $('video'), overlay = $('overlay'), octx = overlay.getContext('2d');
+const pcan = document.createElement('canvas'), pctx = pcan.getContext('2d', {willReadFrequently:true});
+let PW = 320, PH = 180;
+let stream = null, facing = 'environment', wakeLock = null;
+let phase = 'off';      // off | idle | commands | listening | running | zoneArmed | zoneRunning
+let runToken = 0, startPerf = 0, zoneFirst = null, lastResult = null;
+const lineState = {};   // key -> {bg, cov, prevCov, prevT, seg:[a,b], wasLow, px}
+const M = {prev:null, frac:0, prevFrac:0, prevT:0, stillSince:null, set:false};
+let curRes = null, dragPt = null;
+let frames = 0, fpsT = performance.now();
+
+const soundSpeed = () => 331.3 + 0.606 * (+S.temp || 30);
+const dist = () => Math.max(0, parseFloat($('dist').value) || 0);
+const activeLines = () => S.mode === 'zone' ? ['a','b'] : ['finish'];
+
+/* ---------- mode UI ---------- */
+const MODE = {
+  pistol:{desc:'Telefon di garisan penamat menyebut "Ke garisan… Sedia…" lalu berbunyi BANG. Masa bermula pada tembakan dan termasuk masa reaksi. Sesuai hingga ~40 m, atau lebih jauh jika disambung ke pembesar suara.', go:'Mula', dl:'Jarak (m)'},
+  clap:{desc:'Rakan di garisan mula menepuk papan atau meniup wisel sebagai isyarat mula. Mikrofon telefon mengesan bunyi itu dan menolak masa perjalanan bunyi. Sesuai untuk 60–100 m.', go:'Tunggu isyarat', dl:'Jarak (m)'},
+  zone:{desc:'Garisan A (mula) dan B (tamat) kedua-duanya kelihatan dalam kamera — dari ujian 10 m hingga larian penuh 100 m. Letak kon di kedua-dua garisan dan pastikan pelari berlari dalam satu lorong.', go:'Aktifkan garisan', dl:'Jarak A ke B (m)'}
+};
+function setMode(m){
+  if (busy()) return;
+  S.mode = m;
+  document.querySelectorAll('.modes button').forEach(b => b.setAttribute('aria-selected', b.dataset.mode === m));
+  $('modeDesc').textContent = MODE[m].desc;
+  $('btnGo').textContent = MODE[m].go;
+  $('distLabel').textContent = MODE[m].dl;
+  $('dist').value = S.dist[m];
+  $('levelRow').hidden = m !== 'clap';
+  $('startOpt').hidden = m !== 'zone';
+  setStartType(S.startType, true);
+  updatePlan();
+  $('hint').textContent = m === 'zone'
+    ? 'Seret garisan A dan B ke kon mula dan kon tamat.'
+    : 'Seret garisan kuning supaya selari dengan garisan penamat sebenar.';
+  for (const k in lineState) delete lineState[k];
+  if (m === 'clap' && stream) ensureMic().catch(()=>{});
+  save();
+  maybeRestartCamera();
+}
+function setStartType(t, silent){
+  if (busy()) return;
+  S.startType = t;
+  document.querySelectorAll('#startOpt button').forEach(b => b.setAttribute('aria-selected', b.dataset.start === t));
+  if (S.mode === 'zone') $('hint').textContent = t === 'motion'
+    ? 'Letak kotak putih pada atlet di garisan mula. Seret sudutnya untuk ubah lebar.'
+    : 'Seret garisan A dan B ke kon mula dan kon tamat.';
+  M.prev = null;
+  if (!silent) save();
+}
+document.querySelectorAll('#startOpt button').forEach(b => b.onclick = () => setStartType(b.dataset.start));
+function updatePlan(){
+  const p = $('plan'), d = dist();
+  if (S.mode !== 'zone' || !d){ p.hidden = true; return; }
+  const span = d * 1.15;                              // leave ~15% margin around the two lines
+  const uw = span / (2 * Math.tan(60 * Math.PI / 180)); // ultra-wide ~120° field of view
+  const nw = span / (2 * Math.tan(35 * Math.PI / 180)); // main lens ~70° field of view
+  p.hidden = false;
+  p.innerHTML = '';
+  const t = document.createElement('span');
+  t.innerHTML = d <= 20
+    ? `Untuk ${d} m: letak telefon bertentangan dengan titik tengah, kira-kira <b>${Math.max(3, Math.round(nw))} m</b> dari lorong.`
+    : `Untuk ${d} m: letak telefon bertentangan dengan tanda ${+(d / 2).toFixed(1)} m, kira-kira <b>${Math.round(uw)} m</b> dari lorong dengan kanta ultra-lebar (0.5×), atau <b>${Math.round(nw)} m</b> dengan kanta biasa (1×). Kedudukan tinggi seperti tempat duduk penonton lebih jelas.`;
+  p.appendChild(t);
+}
+function desiredRes(){ return (S.mode === 'zone' && dist() > 30) ? 'hi' : 'std'; }
+function maybeRestartCamera(){ if (stream && !busy() && curRes && curRes !== desiredRes()) startCamera(); }
+document.querySelectorAll('.modes button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+$('dist').addEventListener('change', () => { S.dist[S.mode] = dist() || S.dist[S.mode]; save(); updatePlan(); maybeRestartCamera(); });
+$('dist').addEventListener('input', updatePlan);
+
+/* ---------- camera ---------- */
+async function startCamera(){
+  try {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    curRes = desiredRes();
+    const hi = curRes === 'hi';
+    const base = {width:{ideal:hi ? 1920 : 1280}, height:{ideal:hi ? 1080 : 720}};
+    if (S.camId) base.deviceId = {exact:S.camId}; else base.facingMode = {ideal:facing};
+    const tries = [Object.assign({frameRate:{ideal:60, min:25}}, base), base, {facingMode:{ideal:facing}}];
+    stream = null;
+    for (const v of tries){ try { stream = await navigator.mediaDevices.getUserMedia({video:v, audio:false}); break; } catch(e){ if (v === tries[1]) S.camId = null; } }
+    if (!stream) throw new Error('no camera');
+    video.srcObject = stream;
+    await video.play();
+    $('empty').hidden = true;
+    setupCameraControls();
+    phase = 'idle'; $('btnGo').disabled = false;
+    setStatus('Sedia. Uji dengan berjalan melintasi garisan.');
+    requestWake();
+    if (S.mode === 'clap') ensureMic().catch(()=>{});
+    startLoop();
+  } catch(e){
+    setStatus('Kamera tidak dapat dibuka. Benarkan akses kamera dan pastikan halaman dibuka melalui https.', true);
+  }
+}
+$('btnCam').onclick = startCamera;
+async function setupCameraControls(){
+  const track = stream.getVideoTracks()[0], set = track.getSettings ? track.getSettings() : {};
+  try {
+    const cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    const sel = $('camSel'); sel.innerHTML = '';
+    cams.forEach((c, i) => { const o = document.createElement('option'); o.value = c.deviceId; o.textContent = c.label || ('Kamera ' + (i + 1)); if (c.deviceId === set.deviceId) o.selected = true; sel.appendChild(o); });
+    sel.hidden = cams.length < 2;
+  } catch(e){}
+  const caps = track.getCapabilities ? track.getCapabilities() : {};
+  const z = $('zoom');
+  if (caps.zoom && caps.zoom.max > caps.zoom.min){
+    z.min = caps.zoom.min; z.max = caps.zoom.max; z.step = caps.zoom.step || 0.1;
+    z.value = set.zoom || caps.zoom.min; $('zoomWrap').hidden = false;
+  } else $('zoomWrap').hidden = true;
+}
+$('camSel').onchange = e => { if (busy()) return; S.camId = e.target.value; save(); startCamera(); };
+$('zoom').oninput = e => {
+  const track = stream && stream.getVideoTracks()[0];
+  if (track) track.applyConstraints({advanced:[{zoom:+e.target.value}]}).catch(()=>{});
+  for (const k in lineState) delete lineState[k]; M.prev = null;
+};
+video.addEventListener('loadedmetadata', layout);
+window.addEventListener('resize', layout);
+function layout(){
+  const vw = video.videoWidth || 16, vh = video.videoHeight || 9, ar = vw / vh;
+  const st = $('stage'), wrap = st.parentElement;
+  const maxH = innerWidth > innerHeight ? innerHeight - 120 : innerHeight * 0.55;
+  const w = Math.min(wrap.clientWidth, Math.max(200, maxH) * ar);
+  st.style.width = w + 'px'; st.style.aspectRatio = vw + '/' + vh;
+  const dpr = devicePixelRatio || 1;
+  overlay.width = Math.round(w * dpr); overlay.height = Math.round(w / ar * dpr);
+  PW = 320; PH = Math.round(PW / ar); pcan.width = PW; pcan.height = PH;
+  for (const k in lineState) delete lineState[k];
+}
+async function requestWake(){ try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){} }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && stream) requestWake(); });
+
+/* ---------- detection ---------- */
+// Each line is read straight from the full-resolution video, only inside its box,
+// so a runner who is small in the frame (100 m view) still covers most of the box.
+const scan = document.createElement('canvas'); scan.width = 5; scan.height = 240;
+const sctx = scan.getContext('2d', {willReadFrequently:true});
+const mcan = document.createElement('canvas'); mcan.width = 48; mcan.height = 48;
+const mctx = mcan.getContext('2d', {willReadFrequently:true});
+function sample(key){
+  const vw = video.videoWidth, vh = video.videoHeight, [b0, b1] = S.boxes[key];
+  const y0 = Math.floor(b0 * vh), h = Math.max(8, Math.floor((b1 - b0) * vh));
+  const rows = Math.min(240, h);
+  const sw = Math.max(3, Math.round(vw / 480 * 3));
+  const x0 = Math.min(vw - sw, Math.max(0, Math.round(S.lines[key] * vw - sw / 2)));
+  sctx.drawImage(video, x0, y0, sw, h, 0, 0, 5, rows);
+  const d = sctx.getImageData(0, 0, 5, rows).data;
+  const g = new Float32Array(5 * rows);
+  for (let i = 0, j = 0; j < g.length; i += 4, j++) g[j] = d[i]*.299 + d[i+1]*.587 + d[i+2]*.114;
+  return {g, rows, px:h};
+}
+function measure(cur, bg, rows){
+  // longest vertical run of changed rows => torso-sized blob, ignores swinging arms
+  const gapMax = Math.max(2, Math.round(rows * .03));
+  let best = 0, bs = 0, be = 0, run = 0, rs = 0, gap = 0;
+  for (let r = 0; r < rows; r++){
+    let s = 0; const o = r * 5;
+    for (let c = 0; c < 5; c++) s += Math.abs(cur[o+c] - bg[o+c]);
+    if (s / 5 > S.pix){ if (run === 0) rs = r; run += 1 + gap; gap = 0; if (run > best){ best = run; bs = rs; be = r; } }
+    else if (run > 0 && gap < gapMax) gap++;
+    else { run = 0; gap = 0; }
+  }
+  return {cov: best / rows, seg:[bs / rows, (be + 1) / rows]};
+}
+function startBox(){
+  const w = S.startW, [b0, b1] = S.boxes.a;
+  const x0 = Math.max(0, S.lines.a - w / 2), x1 = Math.min(1, S.lines.a + w / 2);
+  return {x0, x1, y0:b0, y1:b1};
+}
+function motionSample(){
+  const vw = video.videoWidth, vh = video.videoHeight, b = startBox();
+  const sx = b.x0 * vw, sy = b.y0 * vh, sw = Math.max(4, (b.x1 - b.x0) * vw), sh = Math.max(4, (b.y1 - b.y0) * vh);
+  const mw = 48, mh = Math.max(8, Math.min(72, Math.round(mw * sh / sw)));
+  if (mcan.height !== mh) mcan.height = mh;
+  mctx.drawImage(video, sx, sy, sw, sh, 0, 0, mw, mh);
+  const d = mctx.getImageData(0, 0, mw, mh).data, g = new Float32Array(mw * mh);
+  for (let i = 0, j = 0; j < g.length; i += 4, j++) g[j] = d[i]*.299 + d[i+1]*.587 + d[i+2]*.114;
+  return g;
+}
+function frameTime(now, meta){
+  let t = now;
+  if (meta && meta.captureTime) t = meta.captureTime;
+  else if (meta && meta.expectedDisplayTime) t = meta.expectedDisplayTime;
+  return t - (+S.lat || 0);
+}
+function process(t){
+  if (!video.videoWidth) return;
+  const thr = S.torso / 100;
+  for (const key of activeLines()){
+    const {g:cur, rows, px} = sample(key);
+    let L = lineState[key];
+    if (!L || L.bg.length !== cur.length){ L = lineState[key] = {bg:cur.slice(), cov:0, prevCov:0, prevT:t, seg:[0,0], wasLow:true, px}; }
+    L.px = px;
+    const m = measure(cur, L.bg, rows);
+    L.cov = m.cov; L.seg = m.seg;
+    // rising edge through threshold, interpolated between frames for sub-frame timing
+    if (L.wasLow && m.cov >= thr){
+      const f = L.prevCov < thr && m.cov > L.prevCov ? (thr - L.prevCov) / (m.cov - L.prevCov) : 1;
+      onCross(key, L.prevT + f * (t - L.prevT));
+      L.wasLow = false;
+    }
+    if (m.cov < thr * 0.4) L.wasLow = true;
+    if (m.cov < 0.04){ for (let i = 0; i < cur.length; i++) L.bg[i] = L.bg[i] * 0.9 + cur[i] * 0.1; }
+    L.prevCov = m.cov; L.prevT = t;
+  }
+  if (S.mode === 'zone' && S.startType === 'motion') processMotion(t);
+}
+function processMotion(t){
+  const g = motionSample();
+  if (!M.prev || M.prev.length !== g.length){ M.prev = g; M.frac = 0; M.prevFrac = 0; M.prevT = t; return; }
+  let n = 0;
+  for (let i = 0; i < g.length; i++) if (Math.abs(g[i] - M.prev[i]) > S.pix) n++;
+  M.prev = g; M.frac = n / g.length;
+  const thr = S.motion / 100;
+  if (phase === 'zoneArmed'){
+    if (M.frac < thr * .3){
+      if (M.stillSince === null) M.stillSince = t;
+      if (!M.set && t - M.stillSince > 700){
+        M.set = true; beep(660, .05);
+        setStatus('Atlet diam dan sedia — masa bermula pada gerakan pertama.');
+      }
+    } else if (M.frac >= thr && M.set){
+      const f = M.prevFrac < thr ? (thr - M.prevFrac) / (M.frac - M.prevFrac) : 1;
+      const tc = M.prevT + f * (t - M.prevT);
+      zoneFirst = 'a'; startPerf = tc; phase = 'zoneRunning';
+      $('clock').classList.add('run');
+      setStatus('Gerakan dikesan — menunggu garisan B…');
+    } else if (M.frac >= thr * .3){
+      M.stillSince = null;
+      if (M.set){ M.set = false; setStatus('Menunggu atlet diam dalam kotak mula…'); }
+    }
+  }
+  M.prevFrac = M.frac; M.prevT = t;
+}
+function onCross(key, tc){
+  if (phase === 'running' && key === 'finish'){
+    if (tc - startPerf < 800) return;        // ignore anything in the first 0.8 s
+    finish((tc - startPerf) / 1000);
+  } else if (phase === 'zoneArmed'){
+    if (S.startType === 'motion') return;    // start comes from the motion box
+    zoneFirst = key; startPerf = tc; phase = 'zoneRunning';
+    setStatus('Garisan ' + key.toUpperCase() + ' dilintasi — menunggu garisan ' + (key === 'a' ? 'B' : 'A') + '…');
+    $('clock').classList.add('run'); beep(880, .06);
+  } else if (phase === 'zoneRunning' && key !== zoneFirst){
+    if (tc - startPerf < 150) return;
+    finish((tc - startPerf) / 1000);
+  }
+}
+
+/* ---------- render loop ---------- */
+let looping = false;
+function startLoop(){
+  if (looping) return; looping = true;
+  const useVfc = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
+  const step = (now, meta) => {
+    frames++;
+    process(frameTime(now, meta));
+    draw();
+    if (useVfc) video.requestVideoFrameCallback(step); else requestAnimationFrame(n => step(n, null));
+  };
+  if (useVfc) video.requestVideoFrameCallback(step); else requestAnimationFrame(n => step(n, null));
+  const tick = () => {
+    const n = performance.now();
+    if (n - fpsT > 1000){ $('fps').textContent = Math.round(frames * 1000 / (n - fpsT)); frames = 0; fpsT = n; }
+    if (phase === 'running' || phase === 'zoneRunning') showTime(Math.max(0, (n - startPerf) / 1000));
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+function draw(){
+  const W = overlay.width, H = overlay.height, dpr = devicePixelRatio || 1;
+  octx.clearRect(0, 0, W, H);
+  const thr = S.torso / 100;
+  const cond = `700 ${13*dpr}px "Barlow Condensed",sans-serif`;
+  if (S.mode === 'zone' && S.startType === 'motion'){
+    const b = startBox();
+    octx.save();
+    octx.strokeStyle = M.set ? '#3DDC97' : 'rgba(255,255,255,.9)'; octx.lineWidth = 2 * dpr; octx.setLineDash([6*dpr, 5*dpr]);
+    octx.strokeRect(b.x0 * W, b.y0 * H, (b.x1 - b.x0) * W, (b.y1 - b.y0) * H);
+    octx.setLineDash([]); octx.fillStyle = '#fff';
+    octx.fillRect(b.x1 * W - 7 * dpr, b.y1 * H - 7 * dpr, 14 * dpr, 14 * dpr);
+    const mh = (b.y1 - b.y0) * H, fr = Math.min(1, M.frac / Math.max(S.motion / 50, .01));
+    octx.fillStyle = 'rgba(8,26,69,.7)'; octx.fillRect(b.x0 * W - 12 * dpr, b.y0 * H, 6 * dpr, mh);
+    octx.fillStyle = M.frac >= S.motion / 100 ? '#FF4B3E' : '#3DDC97';
+    octx.fillRect(b.x0 * W - 12 * dpr, b.y0 * H + mh * (1 - fr), 6 * dpr, mh * fr);
+    octx.restore();
+  }
+  for (const key of activeLines()){
+    const x = S.lines[key] * W, L = lineState[key], [b0, b1] = S.boxes[key];
+    const y0 = b0 * H, y1 = b1 * H, bh = y1 - y0;
+    const main = key === 'finish' || (phase === 'zoneRunning' && key !== zoneFirst);
+    octx.save();
+    // faint full-height guide, solid inside the detection box
+    octx.strokeStyle = 'rgba(255,210,63,.35)'; octx.lineWidth = 1 * dpr;
+    octx.beginPath(); octx.moveTo(x, 0); octx.lineTo(x, H); octx.stroke();
+    octx.strokeStyle = '#FFD23F'; octx.lineWidth = 3 * dpr;
+    if (!main && S.mode === 'zone') octx.setLineDash([10*dpr, 7*dpr]);
+    octx.beginPath(); octx.moveTo(x, y0); octx.lineTo(x, y1); octx.stroke();
+    octx.setLineDash([]);
+    if (b0 > .005 || b1 < .995){ octx.lineWidth = 3 * dpr; octx.beginPath(); octx.moveTo(x - 12*dpr, y0); octx.lineTo(x + 12*dpr, y0); octx.moveTo(x - 12*dpr, y1); octx.lineTo(x + 12*dpr, y1); octx.stroke(); }
+    if (L && L.cov > 0.02){
+      octx.strokeStyle = L.cov >= thr ? '#FF4B3E' : 'rgba(255,75,62,.55)';
+      octx.lineWidth = 9 * dpr;
+      octx.beginPath(); octx.moveTo(x, y0 + L.seg[0] * bh); octx.lineTo(x, y0 + L.seg[1] * bh); octx.stroke();
+    }
+    // line handle, just above the box
+    const hy = Math.max(14 * dpr, y0 - 16 * dpr);
+    octx.fillStyle = '#FFD23F';
+    octx.beginPath(); octx.arc(x, hy, 11 * dpr, 0, Math.PI * 2); octx.fill();
+    octx.fillStyle = '#0C2257'; octx.font = cond; octx.textAlign = 'center'; octx.textBaseline = 'middle';
+    octx.fillText(key === 'finish' ? '⇔' : key.toUpperCase(), x, hy + .5 * dpr);
+    if (L){
+      const mh = Math.min(60 * dpr, bh), mx = x + 10 * dpr, my = y1 - mh;
+      octx.fillStyle = 'rgba(8,26,69,.7)'; octx.fillRect(mx, my, 7 * dpr, mh);
+      octx.fillStyle = L.cov >= thr ? '#FF4B3E' : '#3DDC97';
+      const h = Math.min(1, L.cov / Math.max(thr * 2, .01)) * mh;
+      octx.fillRect(mx, my + mh - h, 7 * dpr, h);
+      octx.fillStyle = '#FFD23F'; octx.fillRect(mx - 2 * dpr, my + mh / 2, 11 * dpr, 2 * dpr);
+    }
+    octx.restore();
+  }
+  if (drag && dragPt) drawLoupe(W, H, dpr);
+}
+function drawLoupe(W, H, dpr){
+  // magnified view of the video around the finger, so a line can sit exactly on a far-away cone
+  const vw = video.videoWidth, vh = video.videoHeight; if (!vw) return;
+  const lw = Math.min(W * .38, 260 * dpr), lh = lw * .72, zoom = 4;
+  const left = dragPt.x > .5, lx = left ? 10 * dpr : W - lw - 10 * dpr, ly = 10 * dpr;
+  const cw = (lw / W) * vw / zoom, ch = (lh / H) * vh / zoom;
+  const cx = Math.min(vw - cw, Math.max(0, dragPt.x * vw - cw / 2));
+  const cy = Math.min(vh - ch, Math.max(0, dragPt.y * vh - ch / 2));
+  octx.save();
+  octx.fillStyle = '#081a45'; octx.fillRect(lx - 2*dpr, ly - 2*dpr, lw + 4*dpr, lh + 4*dpr);
+  octx.drawImage(video, cx, cy, cw, ch, lx, ly, lw, lh);
+  const px = lx + (dragPt.x * vw - cx) / cw * lw, py = ly + (dragPt.y * vh - cy) / ch * lh;
+  octx.strokeStyle = '#FFD23F'; octx.lineWidth = 2 * dpr;
+  if (drag.type === 'x' || drag.type === 'w'){ octx.beginPath(); octx.moveTo(px, ly); octx.lineTo(px, ly + lh); octx.stroke(); }
+  else { octx.beginPath(); octx.moveTo(lx, py); octx.lineTo(lx + lw, py); octx.stroke(); }
+  octx.strokeStyle = '#fff'; octx.strokeRect(lx, ly, lw, lh);
+  const L = lineState[drag.key];
+  if (L && drag.type !== 'w'){
+    const small = L.px < 40;
+    octx.fillStyle = small ? '#FF4B3E' : 'rgba(12,34,87,.85)';
+    octx.fillRect(lx, ly + lh - 22 * dpr, lw, 22 * dpr);
+    octx.fillStyle = '#fff'; octx.font = `600 ${12*dpr}px "Barlow",sans-serif`; octx.textAlign = 'left'; octx.textBaseline = 'middle';
+    octx.fillText(small ? `Kotak ${L.px} px — terlalu kecil, dekatkan atau zum` : `Tinggi kotak ${L.px} px`, lx + 8 * dpr, ly + lh - 11 * dpr);
+  }
+  octx.restore();
+}
+
+/* ---------- dragging lines, box edges, start box ---------- */
+let drag = null;
+function handles(r){
+  const out = [];
+  for (const k of activeLines()){
+    const x = S.lines[k] * r.width, [b0, b1] = S.boxes[k];
+    out.push({key:k, type:'y0', x, y:b0 * r.height});
+    out.push({key:k, type:'y1', x, y:b1 * r.height});
+    out.push({key:k, type:'x', x, y:Math.max(14, b0 * r.height - 16)});
+  }
+  if (S.mode === 'zone' && S.startType === 'motion'){ const b = startBox(); out.push({key:'a', type:'w', x:b.x1 * r.width, y:b.y1 * r.height}); }
+  return out;
+}
+overlay.addEventListener('pointerdown', e => {
+  if (busy()) return;
+  const r = overlay.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+  let pick = null, bd = 30;
+  for (const h of handles(r)){ const d = Math.hypot(h.x - px, h.y - py); if (d < bd){ bd = d; pick = h; } }
+  if (!pick){   // otherwise grab the nearest line anywhere along its length
+    let best = 40;
+    for (const k of activeLines()){ const d = Math.abs(S.lines[k] * r.width - px); if (d < best){ best = d; pick = {key:k, type:'x'}; } }
+  }
+  if (pick){ drag = pick; dragPt = {x:px / r.width, y:py / r.height}; overlay.setPointerCapture(e.pointerId); e.preventDefault(); }
+});
+overlay.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const r = overlay.getBoundingClientRect();
+  const fx = Math.min(.99, Math.max(.01, (e.clientX - r.left) / r.width));
+  const fy = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+  const b = S.boxes[drag.key];
+  if (drag.type === 'x') S.lines[drag.key] = Math.min(.98, Math.max(.02, fx));
+  else if (drag.type === 'y0') b[0] = Math.min(fy, b[1] - .04);
+  else if (drag.type === 'y1') b[1] = Math.max(fy, b[0] + .04);
+  else if (drag.type === 'w'){ S.startW = Math.min(.5, Math.max(.01, 2 * Math.abs(fx - S.lines.a))); b[1] = Math.max(fy, b[0] + .04); }
+  dragPt = {x:fx, y:drag.type === 'x' ? (b[0] + b[1]) / 2 : fy};
+  delete lineState[drag.key]; M.prev = null;
+});
+const endDrag = () => { if (drag){ drag = null; dragPt = null; save(); } };
+overlay.addEventListener('pointerup', endDrag);
+overlay.addEventListener('pointercancel', endDrag);
+
+/* ---------- audio ---------- */
+let actx = null, mic = null, onsetNode = null, analyser = null, micLevel = 0;
+function ensureAudio(){
+  if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)({latencyHint:'interactive'});
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function ctxToPerf(t){
+  if (actx.getOutputTimestamp){
+    const ts = actx.getOutputTimestamp();
+    if (ts && ts.performanceTime) return ts.performanceTime + (t - ts.contextTime) * 1000;
+  }
+  return performance.now() + (t - actx.currentTime + (actx.outputLatency || actx.baseLatency || 0)) * 1000;
+}
+function beep(freq, dur, when){
+  const c = ensureAudio(), t = when || c.currentTime;
+  const o = c.createOscillator(), g = c.createGain();
+  o.frequency.value = freq; o.type = 'square';
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + .005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + .02);
+}
+function bang(when){
+  const c = ensureAudio();
+  const len = Math.floor(c.sampleRate * .35), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+  const src = c.createBufferSource(); src.buffer = buf;
+  const comp = c.createDynamicsCompressor(); comp.threshold.value = -20; comp.ratio.value = 12;
+  const g = c.createGain(); g.gain.value = 1.6;
+  src.connect(g).connect(comp).connect(c.destination); src.start(when);
+  const o = c.createOscillator(), og = c.createGain();
+  o.frequency.setValueAtTime(140, when); o.frequency.exponentialRampToValueAtTime(45, when + .2);
+  og.gain.setValueAtTime(1, when); og.gain.exponentialRampToValueAtTime(.001, when + .25);
+  o.connect(og).connect(comp); o.start(when); o.stop(when + .3);
+}
+const WORKLET = `
+class Onset extends AudioWorkletProcessor{
+  constructor(){super();this.floor=.01;this.armed=false;this.min=.2;this.ratio=7;this.skip=0;this.n=0;
+    this.port.onmessage=e=>{Object.assign(this,e.data);if(e.data.armed)this.skip=24;};}
+  process(inp){const ch=inp[0]&&inp[0][0];if(!ch)return true;let s=0,pk=0;
+    for(let i=0;i<ch.length;i++){const a=Math.abs(ch[i]);s+=a*a;if(a>pk)pk=a;}
+    const rms=Math.sqrt(s/ch.length);
+    if(this.armed){if(this.skip>0)this.skip--;else{const thr=Math.max(this.min,this.floor*this.ratio);
+      for(let i=0;i<ch.length;i++){if(Math.abs(ch[i])>thr){this.port.postMessage({type:'onset',time:(currentFrame+i)/sampleRate});this.armed=false;break;}}}}
+    this.floor=this.floor*.995+rms*.005;
+    if((this.n++&7)===0)this.port.postMessage({type:'level',pk});
+    return true;}}
+registerProcessor('onset',Onset);`;
+async function ensureMic(){
+  const c = ensureAudio();
+  if (mic) return;
+  const ms = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:false}});
+  mic = c.createMediaStreamSource(ms);
+  const sink = c.createGain(); sink.gain.value = 0; sink.connect(c.destination);
+  if (c.audioWorklet){
+    try {
+      const url = URL.createObjectURL(new Blob([WORKLET], {type:'application/javascript'}));
+      await c.audioWorklet.addModule(url);
+      onsetNode = new AudioWorkletNode(c, 'onset');
+      onsetNode.port.onmessage = e => {
+        if (e.data.type === 'level') micLevel = Math.max(e.data.pk, micLevel * .8);
+        else if (e.data.type === 'onset') heardSignal(performance.now() - (actx.currentTime - e.data.time) * 1000 - (actx.baseLatency || 0) * 1000);
+      };
+      mic.connect(onsetNode).connect(sink);
+    } catch(e){ onsetNode = null; }
+  }
+  if (!onsetNode){ analyser = c.createAnalyser(); analyser.fftSize = 512; mic.connect(analyser); }
+  const buf = new Float32Array(512);
+  const poll = () => {
+    if (analyser){
+      analyser.getFloatTimeDomainData(buf); let pk = 0; for (const v of buf) pk = Math.max(pk, Math.abs(v));
+      micLevel = Math.max(pk, micLevel * .8);
+      if (phase === 'listening' && pk > S.clap) heardSignal(performance.now() - 8);
+    }
+    $('levelBar').style.width = Math.min(100, micLevel / .8 * 100) + '%';
+    $('levelMark').style.left = Math.min(100, S.clap / .8 * 100) + '%';
+    requestAnimationFrame(poll);
+  };
+  poll();
+}
+function heardSignal(perf){
+  if (phase !== 'listening') return;
+  const comp = S.comp ? dist() / soundSpeed() * 1000 : 0;
+  startPerf = perf - comp;   // the clap happened before its sound reached the phone
+  phase = 'running'; $('clock').classList.add('run');
+  setStatus('Isyarat dikesan — larian bermula.'); flash();
+}
+
+/* ---------- speech ---------- */
+let voice = null;
+function pickVoice(){
+  const v = speechSynthesis.getVoices();
+  voice = v.find(x => /^ms/i.test(x.lang)) || v.find(x => /^id/i.test(x.lang)) || null;
+}
+if ('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function say(text, tok){
+  return new Promise((res, rej) => {
+    if (tok !== undefined && tok !== runToken) return rej('cancel');
+    if (!S.voice || !('speechSynthesis' in window)){ beep(660, .12); setTimeout(res, 400); return; }
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = voice ? voice.lang : 'ms-MY'; if (voice) u.voice = voice; u.rate = .95; u.volume = 1;
+    let done = false; const fin = () => { if (!done){ done = true; res(); } };
+    u.onend = fin; u.onerror = fin; setTimeout(fin, 3500);
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  });
+}
+function wait(ms, tok){ return new Promise((res, rej) => setTimeout(() => tok === runToken ? res() : rej('cancel'), ms)); }
+
+/* ---------- run control ---------- */
+const busy = () => ['commands','listening','running','zoneArmed','zoneRunning'].includes(phase);
+function setStatus(t, warn){ const s = $('status'); s.textContent = t; s.classList.toggle('warn', !!warn); }
+function showTime(t){ $('timer').innerHTML = t.toFixed(2) + '<small>s</small>'; }
+function flash(red){ const f = $('flash'); f.classList.toggle('red', !!red); f.classList.add('on'); requestAnimationFrame(() => requestAnimationFrame(() => f.classList.remove('on'))); }
+function setBusyUI(on){
+  $('btnGo').hidden = on; $('btnCancel').hidden = !on;
+  document.querySelectorAll('.modes button, #startOpt button, #dist, #camSel').forEach(x => x.disabled = on);
+}
+$('btnGo').onclick = async () => {
+  if (!stream || busy()) return;
+  if (!dist()){ setStatus('Masukkan jarak dalam meter.', true); return; }
+  S.dist[S.mode] = dist(); save();
+  const tok = ++runToken;
+  showTime(0); $('speed').textContent = ''; $('clock').classList.remove('run');
+  for (const k in lineState) lineState[k].wasLow = true;
+  setBusyUI(true);
+  try {
+    if (S.mode === 'pistol'){
+      const c = ensureAudio();
+      phase = 'commands';
+      setStatus('Ke garisan…'); await say('Ke garisan', tok);
+      await wait(2600 + Math.random() * 900, tok);
+      setStatus('Sedia…'); await say('Sedia', tok);
+      await wait(1100 + Math.random() * 1100, tok);
+      const when = c.currentTime + .08;
+      bang(when);
+      const comp = S.comp ? dist() / soundSpeed() * 1000 : 0;
+      startPerf = ctxToPerf(when) + comp;   // runner hears the shot later by distance / speed of sound
+      await wait(80, tok);
+      phase = 'running'; $('clock').classList.add('run'); flash();
+      setStatus('Berlari…');
+    } else if (S.mode === 'clap'){
+      await ensureMic();
+      phase = 'listening';
+      if (onsetNode) onsetNode.port.postMessage({armed:true, min:S.clap});
+      setStatus('Menunggu tepukan atau wisel di garisan mula…');
+    } else {
+      phase = 'zoneArmed'; zoneFirst = null;
+      M.stillSince = null; M.set = false;
+      setStatus(S.startType === 'motion'
+        ? 'Menunggu atlet diam dalam kotak mula…'
+        : 'Sedia — masa bermula apabila badan melintasi garisan pertama.');
+    }
+    // safety timeout
+    setTimeout(() => { if (tok === runToken && busy()) cancel('Tamat masa — tiada larian dikesan dalam 90 saat.'); }, 90000);
+  } catch(e){ /* cancelled */ }
+};
+function cancel(msg){
+  runToken++;
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  if (onsetNode) onsetNode.port.postMessage({armed:false});
+  phase = stream ? 'idle' : 'off';
+  setBusyUI(false); $('clock').classList.remove('run');
+  showTime(0); setStatus(msg || 'Dibatalkan.');
+}
+$('btnCancel').onclick = () => cancel();
+
+function finish(t){
+  runToken++;
+  phase = 'idle'; setBusyUI(false); $('clock').classList.remove('run');
+  showTime(t);
+  const d = dist(), v = d / t;
+  $('speed').textContent = d ? `${v.toFixed(2)} m/s  ·  ${(v * 3.6).toFixed(1)} km/j purata` : '';
+  setStatus('Tamat. Sedia untuk larian seterusnya.');
+  flash(true); beep(1320, .15);
+  if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+  const run = {id:Date.now(), athlete:($('athlete').value.trim() || 'Tanpa nama').slice(0, 40),
+    mode:S.mode, start:S.mode === 'zone' ? S.startType : null, dist:d, time:+t.toFixed(3), date:new Date().toISOString(), thumb:snapshot(t)};
+  runs.unshift(run); if (runs.length > 300) runs.length = 300;
+  save(); renderRecords();
+  if (S.say){
+    const [a, b] = t.toFixed(2).split('.');
+    setTimeout(() => say(`${a} perpuluhan ${b[0]} ${b[1]} saat`), 500);
+  }
+}
+function snapshot(t){
+  try {
+    const w = 360, h = Math.round(w * (video.videoHeight / video.videoWidth));
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const x = c.getContext('2d'); x.drawImage(video, 0, 0, w, h);
+    x.strokeStyle = '#FFD23F'; x.lineWidth = 2;
+    for (const k of activeLines()){ const lx = S.lines[k] * w; x.beginPath(); x.moveTo(lx, 0); x.lineTo(lx, h); x.stroke(); }
+    x.fillStyle = 'rgba(12,34,87,.85)'; x.fillRect(0, h - 30, 110, 30);
+    x.fillStyle = '#FFD23F'; x.font = '700 22px "Barlow Condensed",sans-serif'; x.fillText(t.toFixed(2) + ' s', 8, h - 8);
+    return c.toDataURL('image/jpeg', .62);
+  } catch(e){ return null; }
+}
+
+/* ---------- records ---------- */
+let tab = 'sesi';
+const MODE_NAME = {pistol:'Pistol', clap:'Tepukan', zone:'Dua garisan'};
+const modeName = r => r.mode === 'zone' && r.start === 'motion' ? 'Dua garisan, gerakan' : MODE_NAME[r.mode];
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  tab = b.dataset.tab;
+  document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+  renderRecords();
+});
+function el(tag, props, kids){
+  const e = document.createElement(tag);
+  if (props) for (const k in props){ if (k === 'text') e.textContent = props[k]; else if (k === 'on') e.onclick = props[k]; else e.setAttribute(k, props[k]); }
+  (kids || []).forEach(k => k && e.appendChild(k));
+  return e;
+}
+function renderRecords(){
+  const body = $('recBody'); body.innerHTML = '';
+  const names = [...new Set(runs.map(r => r.athlete))].slice(0, 50);
+  const dl = $('names'); dl.innerHTML = ''; names.forEach(n => dl.appendChild(el('option', {value:n})));
+  if (!runs.length){ body.appendChild(el('p', {class:'none', text:'Belum ada larian. Masa akan muncul di sini selepas pelari pertama tamat.'})); return; }
+  if (tab === 'sesi'){
+    const ul = el('ul', {class:'list'});
+    runs.slice(0, 60).forEach(r => {
+      const d = new Date(r.date);
+      const img = r.thumb ? el('img', {src:r.thumb, alt:'Gambar penamat ' + r.athlete}) : el('div', {style:'width:72px;height:44px;background:var(--trek);border-radius:4px'});
+      if (r.thumb) img.onclick = () => openPhoto(r);
+      const sp = r.dist ? ` · ${(r.dist / r.time).toFixed(2)} m/s` : '';
+      ul.appendChild(el('li', null, [
+        img,
+        el('div', null, [
+          el('div', {class:'who', text:r.athlete}),
+          el('div', {class:'sub', text:`${r.dist} m · ${modeName(r)}${sp} · ${d.toLocaleTimeString('ms-MY', {hour:'2-digit', minute:'2-digit'})}`}),
+        ]),
+        el('div', {class:'t', text:r.time.toFixed(2)}, [el('button', {class:'del', text:'Padam', on:() => { runs = runs.filter(x => x.id !== r.id); save(); renderRecords(); }})])
+      ]));
+    });
+    body.appendChild(ul);
+  } else {
+    const groups = {};
+    runs.forEach(r => {
+      const k = r.athlete.toLowerCase() + '|' + r.dist + '|' + modeName(r);
+      const g = groups[k] || (groups[k] = {athlete:r.athlete, dist:r.dist, name:modeName(r), best:Infinity, n:0, sum:0});
+      g.best = Math.min(g.best, r.time); g.n++; g.sum += r.time;
+    });
+    const rows = Object.values(groups).sort((a, b) => a.dist - b.dist || a.best - b.best);
+    const tb = el('tbody');
+    rows.forEach(g => tb.appendChild(el('tr', null, [
+      el('td', {text:g.athlete}), el('td', {text:g.dist + ' m'}), el('td', {text:g.name}),
+      el('td', {class:'num', text:g.best.toFixed(2)}), el('td', {text:(g.sum / g.n).toFixed(2)}), el('td', {text:String(g.n)})
+    ])));
+    const th = el('tr', null, ['Atlet','Jarak','Mula','Terbaik','Purata','Larian'].map(t => el('th', {text:t})));
+    body.appendChild(el('div', {class:'bestwrap'}, [el('table', {class:'best'}, [el('thead', null, [th]), tb])]));
+  }
+}
+function openPhoto(r){
+  $('photoImg').src = r.thumb;
+  $('photoTitle').textContent = r.athlete + ' — ' + r.time.toFixed(2) + ' s';
+  $('photoMeta').textContent = `${r.dist} m · ${modeName(r)} · ${new Date(r.date).toLocaleString('ms-MY')}. Semak bahawa garisan kuning berada pada badan pelari.`;
+  $('dlgPhoto').showModal();
+}
+$('photoOk').onclick = () => $('dlgPhoto').close();
+$('btnCsv').onclick = () => {
+  const esc = s => '"' + String(s).replace(/"/g, '""') + '"';
+  const lines = ['Tarikh,Masa,Atlet,Jarak (m),Cara mula,Masa (s),Kelajuan (m/s)'];
+  runs.forEach(r => { const d = new Date(r.date);
+    lines.push([d.toLocaleDateString('ms-MY'), d.toLocaleTimeString('ms-MY'), esc(r.athlete), r.dist, modeName(r), r.time.toFixed(3), r.dist ? (r.dist / r.time).toFixed(2) : ''].join(',')); });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\n')], {type:'text/csv'}));
+  a.download = 'pecut-solo-' + new Date().toISOString().slice(0, 10) + '.csv'; a.click();
+};
+$('btnClear').onclick = () => { if (runs.length && confirm('Padam semua ' + runs.length + ' larian? Tindakan ini tidak boleh dibatalkan.')){ runs = []; save(); renderRecords(); } };
+
+/* ---------- dialogs ---------- */
+function bindSettings(){
+  const r = (id, o, key, fmt) => { const i = $(id); i.value = S[key]; const upd = () => { S[key] = +i.value; if (o) $(o).textContent = fmt(S[key]); }; i.oninput = upd; upd(); };
+  r('sPix', 'oPix', 'pix', v => v);
+  r('sTorso', 'oTorso', 'torso', v => v + '%');
+  r('sClap', 'oClap', 'clap', v => v.toFixed(2));
+  r('sMot', 'oMot', 'motion', v => v + '%');
+  r('sTemp', null, 'temp'); r('sLat', null, 'lat');
+  [['sComp','comp'],['sVoice','voice'],['sSay','say']].forEach(([id, k]) => { const i = $(id); i.checked = S[k]; i.onchange = () => S[k] = i.checked; });
+}
+$('btnSettings').onclick = () => { bindSettings(); $('dlgSettings').showModal(); };
+$('setOk').onclick = () => { if (onsetNode) onsetNode.port.postMessage({min:S.clap}); save(); $('dlgSettings').close(); };
+$('dlgSettings').addEventListener('close', save);
+$('btnGuide').onclick = () => $('dlgGuide').showModal();
+$('guideOk').onclick = () => { S.guided = true; save(); $('dlgGuide').close(); };
+
+/* ---------- init ---------- */
+setMode(S.mode);
+renderRecords();
+layout();
+if (!S.guided) $('dlgGuide').showModal();
+if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+  setStatus('Pelayar ini tidak menyokong kamera. Buka melalui https dalam Chrome atau Safari.', true);
+})();
+</script>
+</body>
+</html>
