@@ -126,8 +126,19 @@ dialog::backdrop{background:rgba(4,12,34,.72)}
 .bib .bibtog{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600}
 .bib .bibtog input{width:22px;height:22px;accent-color:var(--kuning);flex:none}
 .bibpick{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.biblist{display:flex;flex-direction:column;gap:6px;width:100%}
+.biblist:empty{display:none}
+.bibchip{display:flex;align-items:center;gap:8px}
+.bibchip .bibname{flex:1;min-width:0;background:var(--trek);border:1.5px solid transparent;border-radius:6px;padding:6px 8px;font-size:14px;color:var(--kapur)}
+.bibchip .bibname:focus{border-color:var(--kuning);outline:none}
+.bibdel{background:none;border:0;color:var(--kabur);font-size:22px;line-height:1;padding:0 6px}
+.bibdel:hover{color:var(--merah)}
+.bibsel{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--kabur)}
+.bibsel select{background:var(--trek);border:0;border-radius:6px;padding:6px 8px;font-size:13px;color:var(--kapur)}
 .swatch{width:34px;height:34px;border-radius:6px;border:2px solid var(--garis);flex:none;background:repeating-conic-gradient(#33456f 0 25%,#26355a 0 50%) 50%/12px 12px}
+.swatch.sm{width:26px;height:26px}
 .bibhint{font-size:12.5px;color:var(--kabur);flex:1;min-width:140px}
+.lanerow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .small.btn-arm{border-color:var(--kuning);color:var(--kuning)}
 @media (prefers-reduced-motion:reduce){.flash{transition:none}}
 </style>
@@ -172,11 +183,17 @@ dialog::backdrop{background:rgba(4,12,34,.72)}
       <button role="tab" data-start="cross"><b>Lintas garisan A</b><small>Mula berdiri di belakang garisan, atau mula terbang</small></button>
       <button role="tab" data-start="motion"><b>Gerakan pertama</b><small>Mula blok atau crouch — atlet diam dahulu</small></button>
     </div>
+    <div id="laneRow" class="lanerow" hidden>
+      <button class="small" id="btnLane">Kunci lorong (auto)</button>
+      <button class="small" id="btnLaneReset" hidden>Buka semula</button>
+      <span class="bibhint" id="laneState">Kecilkan kotak pengesanan kepada satu lorong secara automatik.</span>
+    </div>
     <div class="bib" id="bibRow" hidden>
       <label class="bibtog"><input type="checkbox" id="bibOn"> Hanya kesan pelari berbib warna tertentu</label>
       <div class="bibpick" id="bibPick" hidden>
-        <span class="swatch" id="bibSwatch" aria-hidden="true"></span>
+        <div class="biblist" id="bibList"></div>
         <button class="small" id="btnBibPick">Ambil warna dari kamera</button>
+        <label class="bibsel" id="bibSelWrap" hidden>Masakan <select id="bibSel"></select></label>
         <span class="bibhint" id="bibState">Hidupkan kamera, kemudian ambil warna bib pelari.</span>
       </div>
     </div>
@@ -273,7 +290,7 @@ const KEY = 'pecutsolo.v1';
 
 /* ---------- storage ---------- */
 const DEF = {pix:24, torso:18, comp:true, temp:30, clap:0.2, lat:0, voice:true, say:true,
-  bibOn:false, bibColor:null, bibTol:22, bibSat:22,
+  bibOn:false, bibColors:[], bibSel:'auto', bibTol:22, bibSat:22,
   mode:'pistol', dist:{pistol:30, clap:60, zone:10}, lines:{finish:.5, a:.3, b:.7}, guided:false,
   boxes:{finish:[0,1], a:[.2,.8], b:[.2,.8]}, startType:'cross', startW:.06, motion:3, camId:null, zoom:null};
 let store;
@@ -281,6 +298,10 @@ try { store = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ store = {
 const S = Object.assign({}, DEF, store.settings || {});
 S.dist = Object.assign({}, DEF.dist, S.dist); S.lines = Object.assign({}, DEF.lines, S.lines);
 S.boxes = Object.assign({}, DEF.boxes, S.boxes);
+if (!Array.isArray(S.bibColors)) S.bibColors = [];
+if (S.bibColor && !S.bibColors.length) S.bibColors.push(Object.assign({name:'Pelari 1'}, S.bibColor));  // migrate v1 single colour
+delete S.bibColor;
+if (S.bibSel !== 'auto' && !(+S.bibSel >= 0)) S.bibSel = 'auto';
 let runs = Array.isArray(store.runs) ? store.runs : [];
 function save(){
   try { localStorage.setItem(KEY, JSON.stringify({settings:S, runs})); }
@@ -307,7 +328,8 @@ const dist = () => Math.max(0, parseFloat($('dist').value) || 0);
 const activeLines = () => S.mode === 'zone' ? ['a','b'] : ['finish'];
 
 /* ---------- bib colour helpers ---------- */
-const bibActive = () => S.mode === 'zone' && S.bibOn && !!S.bibColor;   // only gate crossings when a colour is chosen
+let activeBibIdx = -1;    // colour index being timed in the current run (-1 = none / auto not yet decided)
+const bibActive = () => S.mode === 'zone' && S.bibOn && S.bibColors.length > 0;
 function rgb2hsv(r, g, b){
   r /= 255; g /= 255; b /= 255;
   const mx = Math.max(r, g, b), mn = Math.min(r, g, b), df = mx - mn;
@@ -315,12 +337,19 @@ function rgb2hsv(r, g, b){
   if (df){ if (mx === r) h = ((g - b) / df) % 6; else if (mx === g) h = (b - r) / df + 2; else h = (r - g) / df + 4; h *= 60; if (h < 0) h += 360; }
   return {h, s:mx === 0 ? 0 : df / mx, v:mx};
 }
-function bibMatch(r, g, b){          // does this pixel look like the chosen bib colour?
-  const c = rgb2hsv(r, g, b), t = S.bibColor;
-  if (!t || c.v < .15 || c.s < S.bibSat / 100) return false;   // too dark or too washed-out to trust the hue
-  let dh = Math.abs(c.h - t.h); if (dh > 180) dh = 360 - dh;
-  return dh <= S.bibTol;
+const BIB_FRAC = 0.12;   // fraction of the blob that must carry a colour to accept it
+function bibCoverage(cols, idx, bs, be){    // how much of the detected blob rows carry colour `idx`
+  if (!cols || idx < 0 || !cols[idx]) return 0;
+  const c = cols[idx]; let m = 0; const tot = be - bs + 1;
+  for (let r = bs; r <= be; r++) if (c[r] >= 2) m++;
+  return tot > 0 ? m / tot : 0;
 }
+function bestBib(cols, bs, be){             // which saved colour best fills the blob
+  let bi = -1, bc = 0;
+  for (let i = 0; i < cols.length; i++){ const cv = bibCoverage(cols, i, bs, be); if (cv > bc){ bc = cv; bi = i; } }
+  return {idx:bi, cov:bc};
+}
+function bibName(i){ const c = S.bibColors[i]; return c ? (c.name || ('Pelari ' + (i + 1))) : ''; }
 
 /* ---------- mode UI ---------- */
 const MODE = {
@@ -339,8 +368,9 @@ function setMode(m){
   $('levelRow').hidden = m !== 'clap';
   $('startOpt').hidden = m !== 'zone';
   $('bibRow').hidden = m !== 'zone';
-  if (m !== 'zone') picking = false;
-  updateBibUI();
+  $('laneRow').hidden = m !== 'zone';
+  if (m !== 'zone'){ picking = false; laneCapture = false; }
+  updateBibUI(); updateLaneUI();
   setStartType(S.startType, true);
   updatePlan();
   $('hint').textContent = m === 'zone'
@@ -462,16 +492,21 @@ function sample(key){
   const d = sctx.getImageData(0, 0, 5, rows).data;
   const g = new Float32Array(5 * rows);
   for (let i = 0, j = 0; j < g.length; i += 4, j++) g[j] = d[i]*.299 + d[i+1]*.587 + d[i+2]*.114;
-  let col = null;
-  if (bibActive()){                 // count, per row, how many of the 5 pixels carry the bib colour
-    col = new Uint8Array(rows);
-    for (let r = 0; r < rows; r++){ let m = 0; const o = r * 20;
-      for (let c = 0; c < 5; c++){ const p = o + c * 4; if (bibMatch(d[p], d[p+1], d[p+2])) m++; }
-      col[r] = m; }
+  let cols = null;
+  if (bibActive()){                 // per saved colour, count matching pixels on each row
+    const list = S.bibColors, nc = list.length, sat = S.bibSat / 100, tol = S.bibTol;
+    cols = []; for (let i = 0; i < nc; i++) cols.push(new Uint8Array(rows));
+    for (let r = 0; r < rows; r++){ const o = r * 20;
+      for (let c = 0; c < 5; c++){ const p = o + c * 4;
+        const hs = rgb2hsv(d[p], d[p+1], d[p+2]);
+        if (hs.v < .15 || hs.s < sat) continue;               // too dark / washed-out to trust the hue
+        for (let i = 0; i < nc; i++){ let dh = Math.abs(hs.h - list[i].h); if (dh > 180) dh = 360 - dh; if (dh <= tol) cols[i][r]++; }
+      }
+    }
   }
-  return {g, rows, px:h, col};
+  return {g, rows, px:h, cols};
 }
-function measure(cur, bg, rows, col){
+function measure(cur, bg, rows){
   // longest vertical run of changed rows => torso-sized blob, ignores swinging arms
   const gapMax = Math.max(2, Math.round(rows * .03));
   let best = 0, bs = 0, be = 0, run = 0, rs = 0, gap = 0;
@@ -482,12 +517,7 @@ function measure(cur, bg, rows, col){
     else if (run > 0 && gap < gapMax) gap++;
     else { run = 0; gap = 0; }
   }
-  // with the bib filter on, the blob only counts if enough of it carries the chosen colour
-  let colHit = true;
-  if (col){ let m = 0; const tot = be - bs + 1;
-    for (let r = bs; r <= be; r++) if (col[r] >= 2) m++;
-    colHit = tot > 0 && m / tot >= 0.12; }
-  return {cov: best / rows, seg:[bs / rows, (be + 1) / rows], colHit};
+  return {cov: best / rows, seg:[bs / rows, (be + 1) / rows], bs, be};
 }
 function startBox(){
   const w = S.startW, [b0, b1] = S.boxes.a;
@@ -514,16 +544,26 @@ function process(t){
   if (!video.videoWidth) return;
   const thr = S.torso / 100;
   for (const key of activeLines()){
-    const {g:cur, rows, px, col} = sample(key);
+    const {g:cur, rows, px, cols} = sample(key);
     let L = lineState[key];
-    if (!L || L.bg.length !== cur.length){ L = lineState[key] = {bg:cur.slice(), cov:0, prevCov:0, prevT:t, seg:[0,0], wasLow:true, px, colHit:true}; }
+    if (!L || L.bg.length !== cur.length){ L = lineState[key] = {bg:cur.slice(), cov:0, prevCov:0, prevT:t, seg:[0,0], wasLow:true, px, colHit:true, bibIdx:-1}; }
     L.px = px;
-    const m = measure(cur, L.bg, rows, col);
-    L.cov = m.cov; L.seg = m.seg; L.colHit = m.colHit;
+    const m = measure(cur, L.bg, rows);
+    L.cov = m.cov; L.seg = m.seg;
+    // auto lane lock: fit the detection box to the first real body that walks through
+    if (laneCapture && !busy() && m.cov >= thr){ lockLaneTo(key, m.seg); }
+    // which saved bib colour (if any) fills this blob
+    let colHit = true, bibIdx = -1;
+    if (bibActive()){
+      if (phase === 'zoneRunning' && activeBibIdx >= 0){ bibIdx = activeBibIdx; colHit = bibCoverage(cols, bibIdx, m.bs, m.be) >= BIB_FRAC; }
+      else if (S.bibSel === 'auto'){ const bb = bestBib(cols, m.bs, m.be); bibIdx = bb.idx; colHit = bb.cov >= BIB_FRAC; }
+      else { bibIdx = +S.bibSel || 0; colHit = bibCoverage(cols, bibIdx, m.bs, m.be) >= BIB_FRAC; }
+    }
+    L.colHit = colHit; L.bibIdx = bibIdx;
     // rising edge through threshold, interpolated between frames for sub-frame timing
-    if (L.wasLow && m.cov >= thr && m.colHit){
+    if (L.wasLow && m.cov >= thr && colHit){
       const f = L.prevCov < thr && m.cov > L.prevCov ? (thr - L.prevCov) / (m.cov - L.prevCov) : 1;
-      onCross(key, L.prevT + f * (t - L.prevT));
+      onCross(key, L.prevT + f * (t - L.prevT), bibIdx);
       L.wasLow = false;
     }
     if (m.cov < thr * 0.4) L.wasLow = true;
@@ -559,14 +599,16 @@ function processMotion(t){
   }
   M.prevFrac = M.frac; M.prevT = t;
 }
-function onCross(key, tc){
+function onCross(key, tc, bibIdx){
   if (phase === 'running' && key === 'finish'){
     if (tc - startPerf < 800) return;        // ignore anything in the first 0.8 s
     finish((tc - startPerf) / 1000);
   } else if (phase === 'zoneArmed'){
     if (S.startType === 'motion') return;    // start comes from the motion box
+    if (bibActive() && S.bibSel === 'auto' && bibIdx >= 0) activeBibIdx = bibIdx;   // lock the run to whoever started
     zoneFirst = key; startPerf = tc; phase = 'zoneRunning';
-    setStatus('Garisan ' + key.toUpperCase() + ' dilintasi — menunggu garisan ' + (key === 'a' ? 'B' : 'A') + '…');
+    const who = bibActive() && activeBibIdx >= 0 ? ' (' + bibName(activeBibIdx) + ')' : '';
+    setStatus('Garisan ' + key.toUpperCase() + ' dilintasi' + who + ' — menunggu garisan ' + (key === 'a' ? 'B' : 'A') + '…');
     $('clock').classList.add('run'); beep(880, .06);
   } else if (phase === 'zoneRunning' && key !== zoneFirst){
     if (tc - startPerf < 150) return;
@@ -718,8 +760,8 @@ const endDrag = () => { if (drag){ drag = null; dragPt = null; save(); } };
 overlay.addEventListener('pointerup', endDrag);
 overlay.addEventListener('pointercancel', endDrag);
 
-/* ---------- bib colour filter (zone mode) ---------- */
-let picking = false;
+/* ---------- bib colour filter + auto lane lock (zone mode) ---------- */
+let picking = false, laneCapture = false, laneLocked = false;
 const cpick = document.createElement('canvas'); cpick.width = 12; cpick.height = 12;
 const cpctx = cpick.getContext('2d', {willReadFrequently:true});
 function pickColorAt(fx, fy){
@@ -734,26 +776,44 @@ function pickColorAt(fx, fy){
   r = Math.round(r / n); g = Math.round(g / n); b = Math.round(b / n);
   const c = rgb2hsv(r, g, b);
   const hex = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
-  S.bibColor = {h:c.h, s:c.s, v:c.v, hex};
+  if (S.bibColors.length >= 6) setStatus('Maksimum 6 warna bib.', true);
+  else S.bibColors.push({name:'Pelari ' + (S.bibColors.length + 1), h:c.h, s:c.s, v:c.v, hex});
   S.bibOn = true; picking = false;
   for (const k in lineState) delete lineState[k];
   $('hint').textContent = 'Seret garisan A dan B ke kon mula dan kon tamat.';
   save(); updateBibUI();
 }
 function updateBibUI(){
-  const on = S.bibOn;
-  $('bibOn').checked = on;
-  $('bibPick').hidden = !on;
-  const sw = $('bibSwatch'); sw.style.background = S.bibColor ? S.bibColor.hex : '';
+  $('bibOn').checked = S.bibOn;
+  $('bibPick').hidden = !S.bibOn;
+  const list = $('bibList'); list.innerHTML = '';
+  S.bibColors.forEach((c, i) => {
+    const sw = el('span', {class:'swatch sm'}); sw.style.background = c.hex;
+    const nm = el('input', {class:'bibname', value:c.name || ('Pelari ' + (i + 1)), maxlength:'20', 'aria-label':'Nama pelari'});
+    nm.oninput = () => { c.name = nm.value.slice(0, 20); save(); syncBibSel(); };
+    const del = el('button', {class:'bibdel', 'aria-label':'Buang warna', text:'×'});
+    del.onclick = () => { if (busy()) return; S.bibColors.splice(i, 1); if (!S.bibColors.length) S.bibSel = 'auto'; for (const k in lineState) delete lineState[k]; save(); updateBibUI(); };
+    list.appendChild(el('div', {class:'bibchip'}, [sw, nm, del]));
+  });
+  syncBibSel();
   const btn = $('btnBibPick');
   btn.classList.toggle('btn-arm', picking);
-  btn.textContent = picking ? 'Ketik pada bib pelari…' : (S.bibColor ? 'Tukar warna' : 'Ambil warna dari kamera');
+  btn.textContent = picking ? 'Ketik pada bib pelari…' : (S.bibColors.length ? 'Tambah warna lain' : 'Ambil warna dari kamera');
   $('bibState').textContent = picking
     ? 'Ketik pada bib atau baju pelari dalam paparan kamera.'
-    : (S.bibColor
-        ? (S.bibColor.s < .18 ? 'Warna dipilih agak pudar — warna terang memberi hasil lebih tepat.' : 'Warna bib disimpan. Hanya pergerakan warna ini dikira.')
-        : 'Hidupkan kamera, kemudian ambil warna bib pelari.');
+    : (S.bibColors.length
+        ? 'Hanya pergerakan warna tersimpan dikira. Rekod dilabel dengan nama pelari.'
+        : 'Hidupkan kamera, kemudian ambil warna bib setiap pelari.');
 }
+function syncBibSel(){
+  const sel = $('bibSel');
+  $('bibSelWrap').hidden = S.bibColors.length < 2;
+  sel.innerHTML = '';
+  sel.appendChild(el('option', {value:'auto', text:'Mana-mana pelari (auto)'}));
+  S.bibColors.forEach((c, i) => sel.appendChild(el('option', {value:String(i), text:c.name || ('Pelari ' + (i + 1))})));
+  sel.value = (S.bibSel === 'auto' || +S.bibSel < S.bibColors.length) ? S.bibSel : 'auto';
+}
+$('bibSel').onchange = e => { S.bibSel = e.target.value; save(); };
 $('bibOn').onchange = e => {
   if (busy()){ e.target.checked = S.bibOn; return; }
   S.bibOn = e.target.checked; if (!S.bibOn) picking = false;
@@ -766,6 +826,44 @@ $('btnBibPick').onclick = () => {
   picking = !picking;
   $('hint').textContent = picking ? 'Ketik pada bib pelari dalam paparan kamera.' : 'Seret garisan A dan B ke kon mula dan kon tamat.';
   updateBibUI();
+};
+
+/* auto lane lock: shrink the detection box to the lane a runner walks through */
+function lockLaneTo(key, seg){
+  const b = S.boxes[key], span = b[1] - b[0];
+  const a0 = b[0] + seg[0] * span, a1 = b[0] + seg[1] * span, mg = 0.07;
+  const n0 = Math.max(0, a0 - mg), n1 = Math.min(1, a1 + mg);
+  if (n1 - n0 < 0.06) return;                          // ignore specks of motion
+  for (const k of activeLines()) S.boxes[k] = [n0, n1];
+  laneCapture = false; laneLocked = true;
+  for (const k in lineState) delete lineState[k];
+  save(); updateLaneUI();
+  setStatus('Lorong dikunci — kotak dilaraskan pada pelari. Uji sekali lagi.');
+}
+function updateLaneUI(){
+  $('laneRow').hidden = S.mode !== 'zone';
+  const btn = $('btnLane');
+  btn.classList.toggle('btn-arm', laneCapture);
+  btn.textContent = laneCapture ? 'Menunggu pelari…' : 'Kunci lorong (auto)';
+  $('btnLaneReset').hidden = !laneLocked;
+  $('laneState').textContent = laneCapture
+    ? 'Suruh pelari berjalan sekali dalam lorong sasaran.'
+    : (laneLocked ? 'Lorong dikunci. Tekan "Buka semula" untuk set semula.' : 'Kecilkan kotak pengesanan kepada satu lorong secara automatik.');
+}
+$('btnLane').onclick = () => {
+  if (busy()) return;
+  if (!stream){ setStatus('Hidupkan kamera dahulu.', true); return; }
+  laneCapture = !laneCapture;
+  $('hint').textContent = laneCapture ? 'Suruh pelari berjalan sekali dalam lorong sasaran.' : 'Seret garisan A dan B ke kon mula dan kon tamat.';
+  updateLaneUI();
+};
+$('btnLaneReset').onclick = () => {
+  if (busy()) return;
+  for (const k of activeLines()) S.boxes[k] = [0, 1];
+  laneLocked = false; laneCapture = false;
+  for (const k in lineState) delete lineState[k];
+  save(); updateLaneUI();
+  setStatus('Kotak dibuka semula ke penuh.');
 };
 
 /* ---------- audio ---------- */
@@ -916,6 +1014,7 @@ $('btnGo').onclick = async () => {
     } else {
       phase = 'zoneArmed'; zoneFirst = null;
       M.stillSince = null; M.set = false;
+      activeBibIdx = (bibActive() && S.bibSel !== 'auto') ? (+S.bibSel || 0) : -1;
       setStatus(S.startType === 'motion'
         ? 'Menunggu atlet diam dalam kotak mula…'
         : 'Sedia — masa bermula apabila badan melintasi garisan pertama.');
@@ -928,7 +1027,7 @@ function cancel(msg){
   runToken++;
   if ('speechSynthesis' in window) speechSynthesis.cancel();
   if (onsetNode) onsetNode.port.postMessage({armed:false});
-  phase = stream ? 'idle' : 'off';
+  phase = stream ? 'idle' : 'off'; activeBibIdx = -1;
   setBusyUI(false); $('clock').classList.remove('run');
   showTime(0); setStatus(msg || 'Dibatalkan.');
 }
@@ -943,9 +1042,12 @@ function finish(t){
   setStatus('Tamat. Sedia untuk larian seterusnya.');
   flash(true); beep(1320, .15);
   if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
-  const run = {id:Date.now(), athlete:($('athlete').value.trim() || 'Tanpa nama').slice(0, 40),
+  let who = $('athlete').value.trim();
+  if (bibActive() && activeBibIdx >= 0 && S.bibColors[activeBibIdx] && S.bibColors[activeBibIdx].name) who = S.bibColors[activeBibIdx].name;
+  const run = {id:Date.now(), athlete:(who || 'Tanpa nama').slice(0, 40),
     mode:S.mode, start:S.mode === 'zone' ? S.startType : null, dist:d, time:+t.toFixed(3), date:new Date().toISOString(), thumb:snapshot(t)};
   runs.unshift(run); if (runs.length > 300) runs.length = 300;
+  activeBibIdx = -1;
   save(); renderRecords();
   if (S.say){
     const [a, b] = t.toFixed(2).split('.');

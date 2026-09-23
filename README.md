@@ -23,16 +23,30 @@ precision using `requestVideoFrameCallback`.
 The two-line mode can also start on **first motion** (Gerakan pertama): the athlete
 stays still in a start box and the clock starts the instant they move.
 
-### Bib-colour filter (two-line mode)
+### Bib-colour filter — one or many runners (two-line mode)
 
 Because the detector reacts to *any* torso-sized movement, other people crossing the
-frame can trigger a false time. To time only the intended runner, turn on
-**"Hanya kesan pelari berbib warna tertentu"** in two-line mode and tap the runner's
-bib/shirt in the camera view to sample its colour. After that, the start (A) and
-finish (B) lines only fire when the crossing blob carries that colour — other movers
-show a **blue** bar (ignored) instead of the usual **red** (counted). Colour matching
-is hue-based (robust to brightness), with an adjustable **"Toleransi warna bib"** range
-in Settings. Best with a bright, saturated bib and good lighting.
+frame can trigger a false time. To time only the intended runner(s), turn on
+**"Hanya kesan pelari berbib warna tertentu"** in two-line mode and tap a runner's
+bib/shirt in the camera view to sample its colour. You can **add several colours**
+(up to 6), name each one, and delete any. After that, the A/B lines only fire when the
+crossing blob carries a saved colour — other movers show a **blue** bar (ignored)
+instead of the usual **red** (counted).
+
+- With **two or more** colours saved, a **"Masakan"** dropdown appears: pick one
+  runner to time, or **"Mana-mana pelari (auto)"** — the app times whoever crosses
+  and **auto-labels the record** with that runner's name (and locks the finish to the
+  same colour that started the run).
+- Colour matching is hue-based (robust to brightness), with an adjustable
+  **"Toleransi warna bib"** range in Settings. Best with a bright, saturated bib and
+  good lighting; avoid white/black/grey.
+
+### Auto lane lock (two-line mode)
+
+Instead of dragging the box top/bottom marks by hand, tap **"Kunci lorong (auto)"**,
+then have a runner walk once through the target lane. The detection box snaps to the
+vertical band that runner occupied (plus a small margin), so only that lane is watched.
+**"Buka semula"** resets the box to full height.
 
 ## Features
 
