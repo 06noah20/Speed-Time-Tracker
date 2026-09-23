@@ -23,6 +23,17 @@ precision using `requestVideoFrameCallback`.
 The two-line mode can also start on **first motion** (Gerakan pertama): the athlete
 stays still in a start box and the clock starts the instant they move.
 
+### Bib-colour filter (two-line mode)
+
+Because the detector reacts to *any* torso-sized movement, other people crossing the
+frame can trigger a false time. To time only the intended runner, turn on
+**"Hanya kesan pelari berbib warna tertentu"** in two-line mode and tap the runner's
+bib/shirt in the camera view to sample its colour. After that, the start (A) and
+finish (B) lines only fire when the crossing blob carries that colour — other movers
+show a **blue** bar (ignored) instead of the usual **red** (counted). Colour matching
+is hue-based (robust to brightness), with an adjustable **"Toleransi warna bib"** range
+in Settings. Best with a bright, saturated bib and good lighting.
+
 ## Features
 
 - **Body-based detection** — measures the longest vertical run of changed pixels so

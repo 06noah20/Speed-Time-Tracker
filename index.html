@@ -122,6 +122,13 @@ dialog::backdrop{background:rgba(4,12,34,.72)}
 .df{padding:12px 16px;border-top:1px solid var(--garis-halus);display:flex;justify-content:flex-end;gap:8px}
 .df button{background:var(--kuning);color:var(--night);border:0;border-radius:6px;padding:9px 18px;font-weight:600}
 #photoImg{width:100%;display:block;border-radius:4px}
+.bib{border:1.5px solid var(--garis-halus);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.bib .bibtog{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600}
+.bib .bibtog input{width:22px;height:22px;accent-color:var(--kuning);flex:none}
+.bibpick{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.swatch{width:34px;height:34px;border-radius:6px;border:2px solid var(--garis);flex:none;background:repeating-conic-gradient(#33456f 0 25%,#26355a 0 50%) 50%/12px 12px}
+.bibhint{font-size:12.5px;color:var(--kabur);flex:1;min-width:140px}
+.small.btn-arm{border-color:var(--kuning);color:var(--kuning)}
 @media (prefers-reduced-motion:reduce){.flash{transition:none}}
 </style>
 </head>
@@ -164,6 +171,14 @@ dialog::backdrop{background:rgba(4,12,34,.72)}
     <div class="seg" id="startOpt" role="tablist" aria-label="Cara masa bermula" hidden>
       <button role="tab" data-start="cross"><b>Lintas garisan A</b><small>Mula berdiri di belakang garisan, atau mula terbang</small></button>
       <button role="tab" data-start="motion"><b>Gerakan pertama</b><small>Mula blok atau crouch — atlet diam dahulu</small></button>
+    </div>
+    <div class="bib" id="bibRow" hidden>
+      <label class="bibtog"><input type="checkbox" id="bibOn"> Hanya kesan pelari berbib warna tertentu</label>
+      <div class="bibpick" id="bibPick" hidden>
+        <span class="swatch" id="bibSwatch" aria-hidden="true"></span>
+        <button class="small" id="btnBibPick">Ambil warna dari kamera</button>
+        <span class="bibhint" id="bibState">Hidupkan kamera, kemudian ambil warna bib pelari.</span>
+      </div>
     </div>
     <p class="plan" id="plan" hidden></p>
 
@@ -227,6 +242,8 @@ dialog::backdrop{background:rgba(4,12,34,.72)}
       <small>Peratus tinggi skrin yang mesti dilitupi badan sebelum dikira melintas. Ini mengabaikan hayunan tangan. Kurangkan jika pelari kelihatan kecil dalam kamera.</small></div>
     <div class="set"><label for="sMot">Kepekaan gerakan pertama</label><span><input type="range" id="sMot" min="1" max="15" step="0.5"><output id="oMot"></output></span>
       <small>Peratus kotak mula yang mesti berubah untuk dikira sebagai mula (mod Gerakan pertama). Naikkan jika angin atau bayang mencetuskan mula palsu.</small></div>
+    <div class="set"><label for="sBibTol">Toleransi warna bib</label><span><input type="range" id="sBibTol" min="8" max="60" step="1"><output id="oBibTol"></output></span>
+      <small>Julat warna yang diterima sebagai bib pelari (mod Dua garisan). Kecil = lebih ketat kepada satu warna sahaja; besar = terima lebih banyak warna hampir. Naikkan jika bib pelari kadangkala tidak dikesan.</small></div>
     <div class="set"><label for="sComp">Pampasan jarak bunyi</label><input type="checkbox" id="sComp">
       <small>Bunyi mengambil masa ~0.29 s untuk bergerak 100 m. Hidupkan supaya masa pelari tidak dirugikan oleh jarak dari telefon.</small></div>
     <div class="set"><label for="sTemp">Suhu udara (°C)</label><input type="number" id="sTemp" min="0" max="45">
@@ -256,6 +273,7 @@ const KEY = 'pecutsolo.v1';
 
 /* ---------- storage ---------- */
 const DEF = {pix:24, torso:18, comp:true, temp:30, clap:0.2, lat:0, voice:true, say:true,
+  bibOn:false, bibColor:null, bibTol:22, bibSat:22,
   mode:'pistol', dist:{pistol:30, clap:60, zone:10}, lines:{finish:.5, a:.3, b:.7}, guided:false,
   boxes:{finish:[0,1], a:[.2,.8], b:[.2,.8]}, startType:'cross', startW:.06, motion:3, camId:null, zoom:null};
 let store;
@@ -288,6 +306,22 @@ const soundSpeed = () => 331.3 + 0.606 * (+S.temp || 30);
 const dist = () => Math.max(0, parseFloat($('dist').value) || 0);
 const activeLines = () => S.mode === 'zone' ? ['a','b'] : ['finish'];
 
+/* ---------- bib colour helpers ---------- */
+const bibActive = () => S.mode === 'zone' && S.bibOn && !!S.bibColor;   // only gate crossings when a colour is chosen
+function rgb2hsv(r, g, b){
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), df = mx - mn;
+  let h = 0;
+  if (df){ if (mx === r) h = ((g - b) / df) % 6; else if (mx === g) h = (b - r) / df + 2; else h = (r - g) / df + 4; h *= 60; if (h < 0) h += 360; }
+  return {h, s:mx === 0 ? 0 : df / mx, v:mx};
+}
+function bibMatch(r, g, b){          // does this pixel look like the chosen bib colour?
+  const c = rgb2hsv(r, g, b), t = S.bibColor;
+  if (!t || c.v < .15 || c.s < S.bibSat / 100) return false;   // too dark or too washed-out to trust the hue
+  let dh = Math.abs(c.h - t.h); if (dh > 180) dh = 360 - dh;
+  return dh <= S.bibTol;
+}
+
 /* ---------- mode UI ---------- */
 const MODE = {
   pistol:{desc:'Telefon di garisan penamat menyebut "Ke garisan… Sedia…" lalu berbunyi BANG. Masa bermula pada tembakan dan termasuk masa reaksi. Sesuai hingga ~40 m, atau lebih jauh jika disambung ke pembesar suara.', go:'Mula', dl:'Jarak (m)'},
@@ -304,6 +338,9 @@ function setMode(m){
   $('dist').value = S.dist[m];
   $('levelRow').hidden = m !== 'clap';
   $('startOpt').hidden = m !== 'zone';
+  $('bibRow').hidden = m !== 'zone';
+  if (m !== 'zone') picking = false;
+  updateBibUI();
   setStartType(S.startType, true);
   updatePlan();
   $('hint').textContent = m === 'zone'
@@ -425,9 +462,16 @@ function sample(key){
   const d = sctx.getImageData(0, 0, 5, rows).data;
   const g = new Float32Array(5 * rows);
   for (let i = 0, j = 0; j < g.length; i += 4, j++) g[j] = d[i]*.299 + d[i+1]*.587 + d[i+2]*.114;
-  return {g, rows, px:h};
+  let col = null;
+  if (bibActive()){                 // count, per row, how many of the 5 pixels carry the bib colour
+    col = new Uint8Array(rows);
+    for (let r = 0; r < rows; r++){ let m = 0; const o = r * 20;
+      for (let c = 0; c < 5; c++){ const p = o + c * 4; if (bibMatch(d[p], d[p+1], d[p+2])) m++; }
+      col[r] = m; }
+  }
+  return {g, rows, px:h, col};
 }
-function measure(cur, bg, rows){
+function measure(cur, bg, rows, col){
   // longest vertical run of changed rows => torso-sized blob, ignores swinging arms
   const gapMax = Math.max(2, Math.round(rows * .03));
   let best = 0, bs = 0, be = 0, run = 0, rs = 0, gap = 0;
@@ -438,7 +482,12 @@ function measure(cur, bg, rows){
     else if (run > 0 && gap < gapMax) gap++;
     else { run = 0; gap = 0; }
   }
-  return {cov: best / rows, seg:[bs / rows, (be + 1) / rows]};
+  // with the bib filter on, the blob only counts if enough of it carries the chosen colour
+  let colHit = true;
+  if (col){ let m = 0; const tot = be - bs + 1;
+    for (let r = bs; r <= be; r++) if (col[r] >= 2) m++;
+    colHit = tot > 0 && m / tot >= 0.12; }
+  return {cov: best / rows, seg:[bs / rows, (be + 1) / rows], colHit};
 }
 function startBox(){
   const w = S.startW, [b0, b1] = S.boxes.a;
@@ -465,14 +514,14 @@ function process(t){
   if (!video.videoWidth) return;
   const thr = S.torso / 100;
   for (const key of activeLines()){
-    const {g:cur, rows, px} = sample(key);
+    const {g:cur, rows, px, col} = sample(key);
     let L = lineState[key];
-    if (!L || L.bg.length !== cur.length){ L = lineState[key] = {bg:cur.slice(), cov:0, prevCov:0, prevT:t, seg:[0,0], wasLow:true, px}; }
+    if (!L || L.bg.length !== cur.length){ L = lineState[key] = {bg:cur.slice(), cov:0, prevCov:0, prevT:t, seg:[0,0], wasLow:true, px, colHit:true}; }
     L.px = px;
-    const m = measure(cur, L.bg, rows);
-    L.cov = m.cov; L.seg = m.seg;
+    const m = measure(cur, L.bg, rows, col);
+    L.cov = m.cov; L.seg = m.seg; L.colHit = m.colHit;
     // rising edge through threshold, interpolated between frames for sub-frame timing
-    if (L.wasLow && m.cov >= thr){
+    if (L.wasLow && m.cov >= thr && m.colHit){
       const f = L.prevCov < thr && m.cov > L.prevCov ? (thr - L.prevCov) / (m.cov - L.prevCov) : 1;
       onCross(key, L.prevT + f * (t - L.prevT));
       L.wasLow = false;
@@ -577,7 +626,8 @@ function draw(){
     octx.setLineDash([]);
     if (b0 > .005 || b1 < .995){ octx.lineWidth = 3 * dpr; octx.beginPath(); octx.moveTo(x - 12*dpr, y0); octx.lineTo(x + 12*dpr, y0); octx.moveTo(x - 12*dpr, y1); octx.lineTo(x + 12*dpr, y1); octx.stroke(); }
     if (L && L.cov > 0.02){
-      octx.strokeStyle = L.cov >= thr ? '#FF4B3E' : 'rgba(255,75,62,.55)';
+      const hot = L.cov >= thr, wrong = hot && bibActive() && !L.colHit;   // movement, but not the chosen bib colour
+      octx.strokeStyle = wrong ? 'rgba(159,179,222,.75)' : (hot ? '#FF4B3E' : 'rgba(255,75,62,.55)');
       octx.lineWidth = 9 * dpr;
       octx.beginPath(); octx.moveTo(x, y0 + L.seg[0] * bh); octx.lineTo(x, y0 + L.seg[1] * bh); octx.stroke();
     }
@@ -642,6 +692,7 @@ function handles(r){
 overlay.addEventListener('pointerdown', e => {
   if (busy()) return;
   const r = overlay.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+  if (picking){ pickColorAt(px / r.width, py / r.height); e.preventDefault(); return; }
   let pick = null, bd = 30;
   for (const h of handles(r)){ const d = Math.hypot(h.x - px, h.y - py); if (d < bd){ bd = d; pick = h; } }
   if (!pick){   // otherwise grab the nearest line anywhere along its length
@@ -666,6 +717,56 @@ overlay.addEventListener('pointermove', e => {
 const endDrag = () => { if (drag){ drag = null; dragPt = null; save(); } };
 overlay.addEventListener('pointerup', endDrag);
 overlay.addEventListener('pointercancel', endDrag);
+
+/* ---------- bib colour filter (zone mode) ---------- */
+let picking = false;
+const cpick = document.createElement('canvas'); cpick.width = 12; cpick.height = 12;
+const cpctx = cpick.getContext('2d', {willReadFrequently:true});
+function pickColorAt(fx, fy){
+  const vw = video.videoWidth, vh = video.videoHeight; if (!vw) return;
+  const s = 12;
+  const sx = Math.max(0, Math.min(vw - s, Math.round(fx * vw - s / 2)));
+  const sy = Math.max(0, Math.min(vh - s, Math.round(fy * vh - s / 2)));
+  cpctx.drawImage(video, sx, sy, s, s, 0, 0, s, s);
+  const d = cpctx.getImageData(0, 0, s, s).data;
+  let r = 0, g = 0, b = 0, n = 0;
+  for (let i = 0; i < d.length; i += 4){ r += d[i]; g += d[i+1]; b += d[i+2]; n++; }
+  r = Math.round(r / n); g = Math.round(g / n); b = Math.round(b / n);
+  const c = rgb2hsv(r, g, b);
+  const hex = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+  S.bibColor = {h:c.h, s:c.s, v:c.v, hex};
+  S.bibOn = true; picking = false;
+  for (const k in lineState) delete lineState[k];
+  $('hint').textContent = 'Seret garisan A dan B ke kon mula dan kon tamat.';
+  save(); updateBibUI();
+}
+function updateBibUI(){
+  const on = S.bibOn;
+  $('bibOn').checked = on;
+  $('bibPick').hidden = !on;
+  const sw = $('bibSwatch'); sw.style.background = S.bibColor ? S.bibColor.hex : '';
+  const btn = $('btnBibPick');
+  btn.classList.toggle('btn-arm', picking);
+  btn.textContent = picking ? 'Ketik pada bib pelari…' : (S.bibColor ? 'Tukar warna' : 'Ambil warna dari kamera');
+  $('bibState').textContent = picking
+    ? 'Ketik pada bib atau baju pelari dalam paparan kamera.'
+    : (S.bibColor
+        ? (S.bibColor.s < .18 ? 'Warna dipilih agak pudar — warna terang memberi hasil lebih tepat.' : 'Warna bib disimpan. Hanya pergerakan warna ini dikira.')
+        : 'Hidupkan kamera, kemudian ambil warna bib pelari.');
+}
+$('bibOn').onchange = e => {
+  if (busy()){ e.target.checked = S.bibOn; return; }
+  S.bibOn = e.target.checked; if (!S.bibOn) picking = false;
+  for (const k in lineState) delete lineState[k];
+  save(); updateBibUI();
+};
+$('btnBibPick').onclick = () => {
+  if (busy()) return;
+  if (!stream){ setStatus('Hidupkan kamera dahulu untuk ambil warna.', true); return; }
+  picking = !picking;
+  $('hint').textContent = picking ? 'Ketik pada bib pelari dalam paparan kamera.' : 'Seret garisan A dan B ke kon mula dan kon tamat.';
+  updateBibUI();
+};
 
 /* ---------- audio ---------- */
 let actx = null, mic = null, onsetNode = null, analyser = null, micLevel = 0;
@@ -943,6 +1044,7 @@ function bindSettings(){
   r('sTorso', 'oTorso', 'torso', v => v + '%');
   r('sClap', 'oClap', 'clap', v => v.toFixed(2));
   r('sMot', 'oMot', 'motion', v => v + '%');
+  r('sBibTol', 'oBibTol', 'bibTol', v => v + '°');
   r('sTemp', null, 'temp'); r('sLat', null, 'lat');
   [['sComp','comp'],['sVoice','voice'],['sSay','say']].forEach(([id, k]) => { const i = $(id); i.checked = S[k]; i.onchange = () => S[k] = i.checked; });
 }
