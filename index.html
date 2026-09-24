@@ -349,7 +349,7 @@ const activeLines = () => S.mode === 'zone' ? ['a','b'] : S.mode === 'jejak' ? [
 
 /* ---------- bib colour helpers ---------- */
 let activeBibIdx = -1;    // colour index being timed in the current run (-1 = none / auto not yet decided)
-const bibActive = () => (S.mode === 'zone' || S.mode === 'jejak') && S.bibOn && S.bibColors.length > 0;
+const bibActive = () => S.mode === 'zone' && S.bibOn && S.bibColors.length > 0;
 function rgb2hsv(r, g, b){
   r /= 255; g /= 255; b /= 255;
   const mx = Math.max(r, g, b), mn = Math.min(r, g, b), df = mx - mn;
@@ -388,17 +388,16 @@ function setMode(m){
   $('dist').value = S.dist[m];
   $('levelRow').hidden = m !== 'clap';
   $('startOpt').hidden = m !== 'zone';
-  $('bibRow').hidden = !(m === 'zone' || m === 'jejak');
+  $('bibRow').hidden = m !== 'zone';
   $('laneRow').hidden = m !== 'zone';
-  if (m !== 'zone'){ laneCapture = false; }
-  if (m !== 'zone' && m !== 'jejak') picking = false;
+  if (m !== 'zone'){ laneCapture = false; picking = false; }
   updateBibUI(); updateLaneUI();
   setStartType(S.startType, true);
   updatePlan(); updateTracePlan();
   $('hint').textContent = m === 'zone'
     ? 'Seret garisan A dan B ke kon mula dan kon tamat.'
     : m === 'jejak'
-      ? 'Seret tanda MULA dan TAMAT tepat ke garisan sebenar pada trek.'
+      ? 'Seret M (hijau) ke atas badan pelari, dan T ke garisan tamat.'
       : 'Seret garisan kuning supaya selari dengan garisan penamat sebenar.';
   for (const k in lineState) delete lineState[k];
   if (m === 'clap' && stream) ensureMic().catch(()=>{});
@@ -434,7 +433,7 @@ function updateTracePlan(){
   const p = $('tracePlan');
   if (S.mode !== 'jejak'){ p.hidden = true; return; }
   p.hidden = false;
-  p.innerHTML = 'Letak <b>MULA</b> dan <b>TAMAT</b> pada garisan sebenar, masukkan jarak, kemudian tekan <b>Mula jejak</b>. Untuk hasil terbaik, hidupkan <b>warna bib</b> di bawah supaya app ikut pelari itu sahaja.';
+  p.innerHTML = 'Seret <b>T</b> ke garisan tamat, dan tanda <b>M</b> (hijau) tepat ke atas <b>badan/baju pelari</b> di garisan mula. Masukkan jarak, kemudian tekan <b>Mula jejak</b> — <b>M akan mengikut pelari</b> sehingga sampai T, dan masa direkod. Baju/bib warna terang memberi jejak paling tepat.';
 }
 function desiredRes(){ return ((S.mode === 'zone' || S.mode === 'jejak') && dist() > 30) ? 'hi' : 'std'; }
 function maybeRestartCamera(){ if (stream && !busy() && curRes && curRes !== desiredRes()) startCamera(); }
@@ -631,98 +630,114 @@ function processMotion(t){
   }
   M.prevFrac = M.frac; M.prevT = t;
 }
-/* ---------- jejak: follow the runner along a marked path, count distance down ---------- */
-const TRACE_N = 120;                                   // samples along the path
-const T = {prev:null, t:0, prevTi:0, prevPerf:0, has:false, rem:null};
-function resetTrace(){ T.prev = null; T.t = 0; T.prevTi = 0; T.prevPerf = 0; T.has = false; T.rem = dist() || null; }
+/* ---------- jejak: tag the runner with M, follow them to the finish ---------- */
+// T holds the runner tracker: col=sampled colour, (sx,sy)=start on body, (mx,my)=current, t=progress
+const T = {col:null, sx:.18, sy:.62, mx:.18, my:.62, t:0, rem:null, has:false, lost:0,
+  prevGray:null, prevTp:0, prevPerf:0, prevT:0};
+function avgColorAt(fx, fy){
+  const vw = video.videoWidth, vh = video.videoHeight; if (!vw) return null;
+  const s = 14;
+  const sx = Math.max(0, Math.min(vw - s, Math.round(fx * vw - s / 2)));
+  const sy = Math.max(0, Math.min(vh - s, Math.round(fy * vh - s / 2)));
+  cpctx.drawImage(video, sx, sy, s, s, 0, 0, s, s);
+  const d = cpctx.getImageData(0, 0, s, s).data;
+  let r = 0, g = 0, b = 0, n = 0;
+  for (let i = 0; i < d.length; i += 4){ r += d[i]; g += d[i+1]; b += d[i+2]; n++; }
+  r = Math.round(r / n); g = Math.round(g / n); b = Math.round(b / n);
+  const c = rgb2hsv(r, g, b);
+  return {h:c.h, s:c.s, v:c.v, hex:'#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('')};
+}
+function armTrace(){   // called when the run starts: lock onto the runner under the M tag
+  const col = avgColorAt(S.trace.start.x, S.trace.start.y);
+  T.col = col; T.sx = S.trace.start.x; T.sy = S.trace.start.y; T.mx = T.sx; T.my = T.sy;
+  T.t = 0; T.rem = dist() || null; T.has = false; T.lost = 0;
+  T.prevGray = null; T.prevTp = 0; T.prevPerf = 0; T.prevT = 0;
+}
 function processTrace(tNow){
   if (!video.videoWidth) return;
   pctx.drawImage(video, 0, 0, PW, PH);
   const d = pctx.getImageData(0, 0, PW, PH).data;
-  const N = TRACE_N, s = S.trace.start, f = S.trace.finish;
-  const dxp = (f.x - s.x) * PW, dyp = (f.y - s.y) * PH, len = Math.hypot(dxp, dyp) || 1;
-  const nx = -dyp / len, ny = dxp / len;               // perpendicular unit (pixels)
-  const band = Math.max(2, S.traceBand * PH), taps = 5;
-  const useCol = bibActive(), sat = S.bibSat / 100, tol = S.bibTol, list = S.bibColors;
-  const idxSel = (useCol && S.bibSel !== 'auto') ? (+S.bibSel || 0) : -1;
-  const cur = new Float32Array(N), act = new Float32Array(N);
-  for (let i = 0; i < N; i++){
-    const u = i / (N - 1), cx = s.x * PW + dxp * u, cy = s.y * PH + dyp * u;
-    let br = 0, brn = 0, colHit = 0;
-    for (let k = 0; k < taps; k++){
-      const off = ((k - (taps - 1) / 2) / ((taps - 1) / 2)) * band;
-      const px = Math.round(cx + nx * off), py = Math.round(cy + ny * off);
-      if (px < 0 || py < 0 || px >= PW || py >= PH) continue;
-      const p = (py * PW + px) * 4;
-      br += d[p]*.299 + d[p+1]*.587 + d[p+2]*.114; brn++;
-      if (useCol){
-        const hs = rgb2hsv(d[p], d[p+1], d[p+2]);
-        if (hs.v >= .15 && hs.s >= sat){
-          if (idxSel >= 0){ let dh = Math.abs(hs.h - list[idxSel].h); if (dh > 180) dh = 360 - dh; if (dh <= tol) colHit++; }
-          else for (let c = 0; c < list.length; c++){ let dh = Math.abs(hs.h - list[c].h); if (dh > 180) dh = 360 - dh; if (dh <= tol){ colHit++; break; } }
-        }
-      }
+  const gray = new Float32Array(PW * PH);
+  for (let i = 0, j = 0; j < gray.length; i += 4, j++) gray[j] = d[i]*.299 + d[i+1]*.587 + d[i+2]*.114;
+  // search window around the last known runner position (grows a little when lost)
+  const half = 0.15 + 0.05 * Math.min(T.lost, 5);
+  const x0 = Math.max(0, Math.floor((T.mx - half) * PW)), x1 = Math.min(PW, Math.ceil((T.mx + half) * PW));
+  const y0 = Math.max(0, Math.floor((T.my - half) * PH)), y1 = Math.min(PH, Math.ceil((T.my + half) * PH));
+  let found = false, nx = T.mx, ny = T.my;
+  if (T.col){                                          // primary: follow the sampled colour
+    const tol = S.bibTol, sat = S.bibSat / 100, th = T.col.h;
+    let n = 0, sxp = 0, syp = 0;
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++){
+      const p = (y * PW + x) * 4, hs = rgb2hsv(d[p], d[p+1], d[p+2]);
+      if (hs.v < .15 || hs.s < sat) continue;
+      let dh = Math.abs(hs.h - th); if (dh > 180) dh = 360 - dh;
+      if (dh <= tol){ n++; sxp += x; syp += y; }
     }
-    cur[i] = brn ? br / brn : 0;
-    if (useCol) act[i] = colHit / taps;
+    if (n >= 8){ nx = (sxp / n) / PW; ny = (syp / n) / PH; found = true; }
   }
-  if (!useCol){                                        // motion: change from previous frame
-    if (!T.prev || T.prev.length !== N){ T.prev = cur; return; }
-    for (let i = 0; i < N; i++) act[i] = Math.abs(cur[i] - T.prev[i]);
-    T.prev = cur;
+  if (!found && T.prevGray){                            // fallback: motion inside the window
+    const thr = S.pix; let mn = 0, mxx = 0, myy = 0;
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++){
+      const idx = y * PW + x; if (Math.abs(gray[idx] - T.prevGray[idx]) > thr){ mn++; mxx += x; myy += y; }
+    }
+    if (mn >= 12){ nx = (mxx / mn) / PW; ny = (myy / mn) / PH; found = true; }
   }
-  const floor = useCol ? 0.2 : S.pix;                  // ignore weak samples
-  let sum = 0, wsum = 0;
-  for (let i = 0; i < N; i++){ const a = act[i] > floor ? act[i] : 0; wsum += a * i; sum += a; }
-  const minTotal = useCol ? 1.0 : S.pix * 3;           // enough signal to say a runner is present
-  let ti = null;
-  if (sum >= minTotal){ ti = (wsum / sum) / (N - 1); T.has = true; } else T.has = false;
-  if (ti != null) T.t = T.t ? T.t * 0.5 + ti * 0.5 : ti;
-  const D = dist();
-  if (ti != null) T.rem = Math.max(0, D * (1 - ti));
+  T.prevGray = gray;
+  if (found){ T.mx = T.mx * 0.35 + nx * 0.65; T.my = T.my * 0.35 + ny * 0.65; T.has = true; T.lost = 0; }
+  else { T.has = false; T.lost++; }
+  // progress = how far the runner has moved from the start toward the finish
+  const dirx = S.trace.finish.x - T.sx, diry = S.trace.finish.y - T.sy;
+  const denom = dirx * dirx + diry * diry || 1e-6;
+  let tp = ((T.mx - T.sx) * dirx + (T.my - T.sy) * diry) / denom;
+  tp = Math.max(0, tp); T.t = tp;
+  const D = dist(); T.rem = Math.max(0, D * (1 - Math.min(1, tp)));
   if (phase === 'traceArmed'){
-    if (ti != null && ti > 0.04){                      // runner has left the start
-      const fr = (T.prevPerf && T.prevTi < 0.04 && ti > T.prevTi) ? (0.04 - T.prevTi) / (ti - T.prevTi) : 1;
+    if (found && tp > 0.03){                            // runner has left the start
+      const fr = (T.prevPerf && T.prevTp < 0.03 && tp > T.prevTp) ? (0.03 - T.prevTp) / (tp - T.prevTp) : 1;
       startPerf = T.prevPerf ? T.prevPerf + fr * (tNow - T.prevPerf) : tNow;
       phase = 'traceRunning'; $('clock').classList.add('run'); beep(880, .06); flash();
       setStatus('Pelari bergerak — jejak bermula.');
     }
-  } else if (phase === 'traceRunning' && ti != null){
-    setStatus('Baki ' + T.rem.toFixed(0) + ' m');
-    if (ti >= 0.97 && tNow - startPerf > 300) finish((tNow - startPerf) / 1000);
+  } else if (phase === 'traceRunning'){
+    if (T.lost > 45) setStatus('Pelari hilang jejak — cuba baju/bib warna lebih terang.', true);
+    else setStatus('Baki ' + T.rem.toFixed(0) + ' m');
+    if (tp >= 0.97 && tNow - startPerf > 300) finish((tNow - startPerf) / 1000);
   }
-  if (ti != null){ T.prevTi = ti; T.prevPerf = tNow; }
+  T.prevTp = tp; T.prevPerf = tNow; T.prevT = tNow;
 }
 function drawTrace(W, H, dpr){
-  const s = S.trace.start, f = S.trace.finish;
-  const sx = s.x * W, sy = s.y * H, fx = f.x * W, fy = f.y * H;
+  const running = phase === 'traceArmed' || phase === 'traceRunning';
+  const startX = running ? T.sx : S.trace.start.x, startY = running ? T.sy : S.trace.start.y;
+  const fin = S.trace.finish;
+  const sx = startX * W, sy = startY * H, fx = fin.x * W, fy = fin.y * H;
   const dx = fx - sx, dy = fy - sy, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
   octx.save();
-  octx.strokeStyle = 'rgba(255,210,63,.55)'; octx.lineWidth = 3 * dpr;
+  octx.strokeStyle = 'rgba(255,210,63,.5)'; octx.lineWidth = 3 * dpr;
   octx.beginPath(); octx.moveTo(sx, sy); octx.lineTo(fx, fy); octx.stroke();
   const D = dist();
   if (D > 0){                                          // distance ticks along the path
     const step = D > 60 ? 20 : D > 20 ? 10 : 5;
-    octx.font = `700 ${11*dpr}px "Barlow Condensed",sans-serif`; octx.textAlign = 'center'; octx.textBaseline = 'middle';
+    octx.strokeStyle = 'rgba(255,210,63,.55)'; octx.lineWidth = 1.5 * dpr;
     for (let m = 0; m <= D + 1e-6; m += step){
       const u = m / D, tx = sx + dx * u, ty = sy + dy * u;
-      octx.strokeStyle = 'rgba(255,210,63,.6)'; octx.lineWidth = 1.5 * dpr;
       octx.beginPath(); octx.moveTo(tx - nx * 6*dpr, ty - ny * 6*dpr); octx.lineTo(tx + nx * 6*dpr, ty + ny * 6*dpr); octx.stroke();
     }
   }
-  const marker = (x, y, label, col) => {
-    octx.fillStyle = col; octx.beginPath(); octx.arc(x, y, 11 * dpr, 0, Math.PI * 2); octx.fill();
+  const marker = (x, y, label, col, rBig) => {
+    const r = (rBig ? 12 : 11) * dpr;
+    octx.fillStyle = col; octx.beginPath(); octx.arc(x, y, r, 0, Math.PI * 2); octx.fill();
     octx.fillStyle = '#0C2257'; octx.font = `700 ${11*dpr}px "Barlow Condensed",sans-serif`; octx.textAlign = 'center'; octx.textBaseline = 'middle';
     octx.fillText(label, x, y + .5 * dpr);
   };
-  marker(sx, sy, 'M', '#3DDC97'); marker(fx, fy, 'T', '#FF4B3E');
-  if ((phase === 'traceArmed' || phase === 'traceRunning') && T.has){
-    const u = Math.min(1, Math.max(0, T.t)), rx = sx + dx * u, ry = sy + dy * u;
-    octx.fillStyle = '#FFD23F'; octx.beginPath(); octx.arc(rx, ry, 8 * dpr, 0, Math.PI * 2); octx.fill();
+  marker(fx, fy, 'T', '#FF4B3E');
+  // M rides the runner while running, sits on the start marker while idle
+  const mx = (running ? T.mx : S.trace.start.x) * W, my = (running ? T.my : S.trace.start.y) * H;
+  marker(mx, my, 'M', (running && !T.has) ? '#9FB3DE' : '#3DDC97', running);
+  if (running){
     const rem = (T.rem != null ? T.rem : D).toFixed(0) + ' m';
     octx.font = `700 ${26*dpr}px "Barlow Condensed",sans-serif`; octx.textAlign = 'center'; octx.textBaseline = 'bottom';
-    octx.lineWidth = 5 * dpr; octx.strokeStyle = 'rgba(8,26,69,.92)'; octx.strokeText(rem, rx, ry - 12 * dpr);
-    octx.fillStyle = '#fff'; octx.fillText(rem, rx, ry - 12 * dpr);
+    octx.lineWidth = 5 * dpr; octx.strokeStyle = 'rgba(8,26,69,.92)'; octx.strokeText(rem, mx, my - 16 * dpr);
+    octx.fillStyle = '#fff'; octx.fillText(rem, mx, my - 16 * dpr);
   }
   octx.restore();
 }
@@ -888,7 +903,7 @@ overlay.addEventListener('pointermove', e => {
   const fy = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
   if (drag.type === 'ts' || drag.type === 'tf'){
     const pt = drag.type === 'ts' ? S.trace.start : S.trace.finish;
-    pt.x = fx; pt.y = fy; dragPt = {x:fx, y:fy}; T.prev = null;
+    pt.x = fx; pt.y = fy; dragPt = {x:fx, y:fy}; T.prevGray = null;
     return;
   }
   const b = S.boxes[drag.key];
@@ -1163,10 +1178,8 @@ $('btnGo').onclick = async () => {
         ? 'Menunggu atlet diam dalam kotak mula…'
         : 'Sedia — masa bermula apabila badan melintasi garisan pertama.');
     } else {   // jejak
-      resetTrace(); phase = 'traceArmed';
-      activeBibIdx = (bibActive() && S.bibSel !== 'auto') ? (+S.bibSel || 0) : -1;
-      showTime(0);
-      setStatus('Sedia — jejak bermula apabila pelari bergerak dari garisan MULA.');
+      armTrace(); phase = 'traceArmed'; showTime(0);
+      setStatus(T.col ? 'Menjejak pelari — mula apabila dia bergerak.' : 'Sedia — mula apabila pelari bergerak. (Letak M pada pelari untuk jejak warna.)');
     }
     // safety timeout
     setTimeout(() => { if (tok === runToken && busy()) cancel('Tamat masa — tiada larian dikesan dalam 90 saat.'); }, 90000);

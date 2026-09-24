@@ -48,16 +48,16 @@ A different approach for when a thin trip-line is hard to place or the runner lo
 small: mark the course, then let the app **follow the runner** and show the distance
 remaining, ticking down like a live measurement.
 
-1. Choose **Jejak**, turn on the camera, and drag the **MULA** (start) and **TAMAT**
-   (finish) markers onto the real lines on the track (a magnifier appears while
-   dragging for precise placement).
-2. Enter the **real distance** between them once (e.g. 100 m) — the app can't measure
-   true metres from pixels, so you supply the known distance. Tick marks are drawn
-   along the path.
-3. (Recommended) turn on a **bib colour** so the app follows that runner specifically.
-4. Tap **Mula jejak**. When the runner leaves the MULA marker the clock starts; a big
-   **remaining-distance** number follows the runner (100 → 0 m) while the timer runs;
-   when they reach TAMAT the time is recorded.
+1. Choose **Jejak**, turn on the camera, and drag the **T** (finish) marker onto the
+   real finish line, and the green **M** marker directly **onto the runner's body /
+   shirt** at the start (a magnifier appears while dragging for precise placement).
+2. Enter the **real distance** from start to finish once (e.g. 100 m) — the app can't
+   measure true metres from pixels, so you supply the known distance.
+3. Tap **Mula jejak**. The app samples the colour under **M** and **M then follows the
+   runner** as they move. When the runner leaves the start the clock starts; a big
+   **remaining-distance** number rides along with M (100 → 0 m) while the timer runs;
+   when the runner reaches **T** the time is recorded. If the colour is lost it falls
+   back to motion tracking within a search window.
 
 **Honest limits.** This is *not* AR — the iPhone Measure app works because it uses
 ARKit/LiDAR, which browsers cannot access. Distance labels in the *middle* of the path
