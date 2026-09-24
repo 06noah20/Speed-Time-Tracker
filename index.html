@@ -18,34 +18,45 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-html,body{margin:0;background:var(--night);color:var(--kapur);font-family:var(--body);font-size:16px;line-height:1.45}
+html,body{margin:0;height:100%;background:var(--night);color:var(--kapur);font-family:var(--body);font-size:16px;line-height:1.45}
+body{display:flex;flex-direction:column;min-height:100dvh;overflow:hidden}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:3px solid var(--kuning);outline-offset:2px}
-.bar{display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:2px solid var(--garis)}
+.bar{display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:2px solid var(--garis);flex:none}
+.iconbtn[aria-expanded="true"]{border-color:var(--kuning);color:var(--kuning)}
 .brand{font-family:var(--cond);font-style:italic;font-weight:800;font-size:28px;letter-spacing:.01em;line-height:1}
 .brand span{color:var(--kuning)}
 .tag{color:var(--kabur);font-size:14px;flex:1}
 .iconbtn{background:none;border:1.5px solid var(--garis-halus);border-radius:8px;padding:7px 12px;font-size:14px}
 .iconbtn:hover{border-color:var(--kabur)}
-main{display:grid;grid-template-columns:1fr;gap:0}
-@media (min-width:880px){main{grid-template-columns:minmax(0,1.45fr) minmax(340px,1fr)}.cam{border-right:2px solid var(--garis)}}
-.cam{padding:14px 16px;min-width:0}
-.stagewrap{display:flex;justify-content:center}
-.stage{position:relative;background:#081a45;border-radius:6px;overflow:hidden;width:100%;aspect-ratio:16/9;touch-action:none}
+main{position:relative;flex:1;min-height:0;overflow:hidden}
+@media (min-width:880px){.panel{width:400px}}
+.cam{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#050f2b}
+.stage{position:relative;background:#081a45;overflow:hidden;touch-action:none;max-width:100%;max-height:100%}
 .stage video,.stage canvas{position:absolute;inset:0;width:100%;height:100%}
 .stage video{object-fit:fill;background:#081a45}
 .stage canvas{cursor:ew-resize}
-.empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:20px}
+.empty{position:absolute;inset:0;z-index:4;background:#081a45;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:20px}
 .empty p{margin:0;color:var(--kabur);max-width:36ch}
 .flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:var(--kuning);mix-blend-mode:screen;transition:opacity .5s}
 .flash.on{opacity:.55;transition:none}
 .flash.red{background:var(--merah)}
-.meta{display:flex;gap:14px;align-items:center;margin-top:8px;font-size:13px;color:var(--kabur);flex-wrap:wrap}
-.meta b{color:var(--kapur);font-weight:600}
-.meta .grow{flex:1;min-width:180px}
-.meta button{font-size:13px;padding:5px 10px}
-.panel{padding:14px 16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.topov{position:absolute;top:0;left:0;right:0;display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:7px 10px;font-size:12.5px;color:var(--kapur);pointer-events:none;background:linear-gradient(rgba(4,12,34,.6),rgba(4,12,34,0))}
+.topov .hint{flex:1;text-shadow:0 1px 3px rgba(0,0,0,.75)}
+.topov .fps{color:var(--kabur);white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.75)}
+.topov .fps b{color:var(--kapur);font-weight:600}
+.hud-info{position:absolute;left:12px;bottom:12px;pointer-events:none;max-width:62%;text-shadow:0 1px 5px rgba(0,0,0,.85)}
+.actions{position:absolute;right:12px;bottom:12px;display:flex;gap:10px;z-index:2}
+.actions .go{flex:none}
+.panel{position:absolute;top:0;right:0;bottom:0;width:min(384px,92vw);background:rgba(9,22,53,.97);border-left:2px solid var(--garis);transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column;z-index:5}
+main.panel-open .panel{transform:none}
+.panel-scroll{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+.camrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--kabur)}
+.camrow:empty{display:none}
+.camrow select{background:var(--trek);border:0;border-radius:6px;padding:6px 8px;font-size:13px;max-width:200px}
+.camrow .zoomwrap{display:flex;align-items:center;gap:6px}
+.camrow input[type=range]{width:120px;accent-color:var(--kuning)}
 .modes{display:grid;grid-template-columns:repeat(2,1fr);border:2px solid var(--garis);border-radius:8px;overflow:hidden}
 .modes button{background:none;border:0;padding:10px 8px;text-align:left;border-left:2px solid var(--garis);display:flex;flex-direction:column;gap:2px;min-height:64px}
 .modes button:nth-child(odd){border-left:0}
@@ -70,9 +81,9 @@ main{display:grid;grid-template-columns:1fr;gap:0}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--kabur)}
 label.f input{background:var(--trek);border:1.5px solid transparent;border-radius:6px;padding:10px 12px;font-size:17px;color:var(--kapur);width:100%}
 label.f input:focus{border-color:var(--kuning);outline:none}
-.clock{border-top:2px solid var(--garis);border-bottom:2px solid var(--garis);padding:6px 0 10px}
-.timer{font-family:var(--cond);font-weight:700;font-size:clamp(72px,17vw,148px);line-height:.95;color:var(--kuning);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
-.timer small{font-size:.32em;color:var(--kabur);margin-left:4px;font-weight:500}
+.clock{padding:0}
+.timer{font-family:var(--cond);font-weight:700;font-size:clamp(40px,9vw,88px);line-height:.9;color:var(--kuning);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.timer small{font-size:.32em;color:var(--kapur);margin-left:4px;font-weight:500}
 .clock.run .timer{color:var(--kapur)}
 .status{font-size:15px;font-weight:600;min-height:1.45em}
 .status.warn{color:var(--merah)}
@@ -147,33 +158,40 @@ dialog::backdrop{background:rgba(4,12,34,.72)}
 <body>
 <header class="bar">
   <div class="brand">PECUT <span>SOLO</span></div>
-  <div class="tag">Pemasa pecut dengan satu telefon</div>
+  <div class="tag">Pemasa pecut satu telefon</div>
+  <button class="iconbtn" id="btnPanel" aria-expanded="true">Kawalan</button>
   <button class="iconbtn" id="btnGuide">Panduan</button>
   <button class="iconbtn" id="btnSettings">Tetapan</button>
 </header>
 
-<main>
+<main id="main" class="panel-open">
   <section class="cam">
-    <div class="stagewrap">
-      <div class="stage" id="stage">
-        <video id="video" playsinline muted autoplay></video>
-        <canvas id="overlay"></canvas>
-        <div class="flash" id="flash"></div>
-        <div class="empty" id="empty">
-          <p>Letak telefon di tepi garisan penamat, kamera menghala melintang ke lorong larian.</p>
-          <button class="go" id="btnCam" style="flex:none;padding:12px 26px;font-size:22px">Hidupkan kamera</button>
-        </div>
+    <div class="stage" id="stage">
+      <video id="video" playsinline muted autoplay></video>
+      <canvas id="overlay"></canvas>
+      <div class="flash" id="flash"></div>
+      <div class="topov">
+        <span class="hint" id="hint">Seret garisan kuning supaya selari dengan garisan penamat sebenar.</span>
+        <span class="fps"><b id="fps">—</b> fps</span>
       </div>
-    </div>
-    <div class="meta">
-      <span><b id="fps">—</b> fps</span>
-      <span class="grow" id="hint">Seret garisan kuning supaya selari dengan garisan penamat sebenar.</span>
-      <select id="camSel" hidden aria-label="Pilih kamera"></select>
-      <label id="zoomWrap" hidden style="display:flex;align-items:center;gap:6px">Zum <input type="range" id="zoom"></label>
+      <div class="clock hud-info" id="clock">
+        <div class="timer" id="timer">0.00<small>s</small></div>
+        <div class="status" id="status">Hidupkan kamera untuk bermula.</div>
+        <div class="speed" id="speed"></div>
+      </div>
+      <div class="actions">
+        <button class="go" id="btnGo" disabled>Mula</button>
+        <button class="stop" id="btnCancel" hidden>Batal</button>
+      </div>
+      <div class="empty" id="empty">
+        <p>Letak telefon di tepi garisan penamat, kamera menghala melintang ke lorong larian.</p>
+        <button class="go" id="btnCam" style="flex:none;padding:12px 26px;font-size:22px">Hidupkan kamera</button>
+      </div>
     </div>
   </section>
 
-  <section class="panel">
+  <aside class="panel" id="panel">
+   <div class="panel-scroll">
     <div class="modes" role="tablist" aria-label="Cara mula">
       <button role="tab" data-mode="pistol" aria-selected="true"><b>Pistol</b><small>Telefon bunyikan tembakan</small></button>
       <button role="tab" data-mode="clap" aria-selected="false"><b>Tepukan</b><small>Mula dengan tepukan atau wisel</small></button>
@@ -208,20 +226,14 @@ dialog::backdrop{background:rgba(4,12,34,.72)}
       <datalist id="names"></datalist>
     </div>
 
-    <div class="clock" id="clock">
-      <div class="timer" id="timer">0.00<small>s</small></div>
-      <div class="status" id="status">Hidupkan kamera untuk bermula.</div>
-      <div class="speed" id="speed"></div>
-    </div>
-
     <div class="levelrow" id="levelRow" hidden>
       <span>Bunyi di mikrofon — garisan kuning ialah paras pencetus</span>
       <div class="level"><i id="levelBar"></i><u id="levelMark"></u></div>
     </div>
 
-    <div class="actions">
-      <button class="go" id="btnGo" disabled>Mula</button>
-      <button class="stop" id="btnCancel" hidden>Batal</button>
+    <div class="camrow">
+      <select id="camSel" hidden aria-label="Pilih kamera"></select>
+      <label id="zoomWrap" hidden class="zoomwrap">Zum <input type="range" id="zoom"></label>
     </div>
 
     <div class="rec">
@@ -235,7 +247,8 @@ dialog::backdrop{background:rgba(4,12,34,.72)}
       </div>
       <div id="recBody"></div>
     </div>
-  </section>
+   </div>
+  </aside>
 </main>
 
 <dialog id="dlgGuide">
@@ -292,7 +305,7 @@ const $ = id => document.getElementById(id);
 const KEY = 'pecutsolo.v1';
 
 /* ---------- storage ---------- */
-const DEF = {pix:24, torso:18, comp:true, temp:30, clap:0.2, lat:0, voice:true, say:true,
+const DEF = {pix:24, torso:18, comp:true, temp:30, clap:0.2, lat:0, voice:true, say:true, panelOpen:true,
   bibOn:false, bibColors:[], bibSel:'auto', bibTol:22, bibSat:22,
   mode:'pistol', dist:{pistol:30, clap:60, zone:10, jejak:100}, lines:{finish:.5, a:.3, b:.7}, guided:false,
   boxes:{finish:[0,1], a:[.2,.8], b:[.2,.8]}, startType:'cross', startW:.06, motion:3, camId:null, zoom:null,
@@ -480,12 +493,13 @@ video.addEventListener('loadedmetadata', layout);
 window.addEventListener('resize', layout);
 function layout(){
   const vw = video.videoWidth || 16, vh = video.videoHeight || 9, ar = vw / vh;
-  const st = $('stage'), wrap = st.parentElement;
-  const maxH = innerWidth > innerHeight ? innerHeight - 120 : innerHeight * 0.55;
-  const w = Math.min(wrap.clientWidth, Math.max(200, maxH) * ar);
-  st.style.width = w + 'px'; st.style.aspectRatio = vw + '/' + vh;
+  const st = $('stage'), cam = st.parentElement;
+  const availW = cam.clientWidth || innerWidth, availH = cam.clientHeight || innerHeight;
+  let w = Math.min(availW, availH * ar), h = w / ar;
+  if (h > availH){ h = availH; w = h * ar; }
+  st.style.width = w + 'px'; st.style.height = h + 'px'; st.style.aspectRatio = 'auto';
   const dpr = devicePixelRatio || 1;
-  overlay.width = Math.round(w * dpr); overlay.height = Math.round(w / ar * dpr);
+  overlay.width = Math.round(w * dpr); overlay.height = Math.round(h * dpr);
   PW = 320; PH = Math.round(PW / ar); pcan.width = PW; pcan.height = PH;
   for (const k in lineState) delete lineState[k];
 }
@@ -1111,6 +1125,7 @@ function flash(red){ const f = $('flash'); f.classList.toggle('red', !!red); f.c
 function setBusyUI(on){
   $('btnGo').hidden = on; $('btnCancel').hidden = !on;
   document.querySelectorAll('.modes button, #startOpt button, #dist, #camSel').forEach(x => x.disabled = on);
+  if (on) setPanel(false);            // give the camera the full screen during a run
 }
 $('btnGo').onclick = async () => {
   if (!stream || busy()) return;
@@ -1288,10 +1303,18 @@ function bindSettings(){
 $('btnSettings').onclick = () => { bindSettings(); $('dlgSettings').showModal(); };
 $('setOk').onclick = () => { if (onsetNode) onsetNode.port.postMessage({min:S.clap}); save(); $('dlgSettings').close(); };
 $('dlgSettings').addEventListener('close', save);
+function setPanel(open){
+  S.panelOpen = open;
+  $('main').classList.toggle('panel-open', open);
+  $('btnPanel').setAttribute('aria-expanded', open ? 'true' : 'false');
+  save();
+}
+$('btnPanel').onclick = () => setPanel(!S.panelOpen);
 $('btnGuide').onclick = () => $('dlgGuide').showModal();
 $('guideOk').onclick = () => { S.guided = true; save(); $('dlgGuide').close(); };
 
 /* ---------- init ---------- */
+setPanel(S.panelOpen !== false);
 setMode(S.mode);
 renderRecords();
 layout();

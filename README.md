@@ -90,6 +90,15 @@ vertical band that runner occupied (plus a small margin), so only that lane is w
   camera-latency correction.
 - Screen wake-lock, camera picker, pinch/zoom support, voice announcements.
 
+## Interface
+
+The camera is the full screen. Live info (timer, status, remaining distance) and the
+**Mula / Batal** button float as an overlay on top of the video. All setup — mode,
+distance, athlete name, bib colours, lane lock, camera picker, records — lives in a
+slide-in **Kawalan** (Controls) drawer toggled from the header. The drawer auto-closes
+when a run starts so the camera has the whole screen. Use the phone in **landscape** on
+a tripod for the largest view.
+
 ## Usage
 
 1. Open `index.html` in **Chrome or Safari over HTTPS** (camera access requires a
