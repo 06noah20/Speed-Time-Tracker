@@ -19,6 +19,7 @@ precision using `requestVideoFrameCallback`.
 | **Pistol** | Pistol | Phone speaks *"Ke garisan… Sedia…"* then fires a BANG; clock starts on the shot (includes reaction time) | up to ~40 m |
 | **Clap / whistle** | Tepukan | Mic detects a clap/whistle/board at the start line; subtracts sound travel time | 60–100 m |
 | **Two lines (zone)** | Dua garisan | Both start line (A) and finish line (B) are visible in frame | 10 m up to 100 m with an ultra-wide lens |
+| **Track (jejak)** | Jejak | Follows the runner along a marked path and counts the remaining distance down to 0 m | 10–100 m, static camera |
 
 The two-line mode can also start on **first motion** (Gerakan pertama): the athlete
 stays still in a start box and the clock starts the instant they move.
@@ -40,6 +41,32 @@ instead of the usual **red** (counted).
 - Colour matching is hue-based (robust to brightness), with an adjustable
   **"Toleransi warna bib"** range in Settings. Best with a bright, saturated bib and
   good lighting; avoid white/black/grey.
+
+### Track mode with live distance countdown (jejak)
+
+A different approach for when a thin trip-line is hard to place or the runner looks
+small: mark the course, then let the app **follow the runner** and show the distance
+remaining, ticking down like a live measurement.
+
+1. Choose **Jejak**, turn on the camera, and drag the **MULA** (start) and **TAMAT**
+   (finish) markers onto the real lines on the track (a magnifier appears while
+   dragging for precise placement).
+2. Enter the **real distance** between them once (e.g. 100 m) — the app can't measure
+   true metres from pixels, so you supply the known distance. Tick marks are drawn
+   along the path.
+3. (Recommended) turn on a **bib colour** so the app follows that runner specifically.
+4. Tap **Mula jejak**. When the runner leaves the MULA marker the clock starts; a big
+   **remaining-distance** number follows the runner (100 → 0 m) while the timer runs;
+   when they reach TAMAT the time is recorded.
+
+**Honest limits.** This is *not* AR — the iPhone Measure app works because it uses
+ARKit/LiDAR, which browsers cannot access. Distance labels in the *middle* of the path
+are an approximation (camera perspective), but the **final time is triggered at the
+real start/finish markers**, so it stays accurate. Tracking a small, fast runner in a
+phone video is genuinely hard: use a static camera (tripod), a bright saturated bib,
+good light, and treat the mode as **experimental** — tune sensitivity in Settings and
+verify against a known time before relying on it. For true AR-grade ranging you'd need
+a native iOS app (Swift + ARKit), which is a separate project.
 
 ### Auto lane lock (two-line mode)
 
